@@ -48,6 +48,17 @@ class ParkingSupervisor:
             return Supervision(self.status, stop, decision.reason)
         return Supervision(self.status, decision.output, "clear")
 
+    def replan(self, pose, goal, *, name="replanned"):
+        """Recompute a route after an obstacle update. No automatic resume on failure."""
+        from .scenarios import Scenario
+        from .planner import plan
+        if self.status not in (Status.REPLAN_REQUIRED, Status.STOPPED):
+            raise RuntimeError("replan requires stopped or changed-obstacle state")
+        scene = Scenario(name, "Replanned parking", pose, goal, self.obstacles, self.vehicle)
+        result = plan(scene)
+        self.status = Status.ACTIVE if result.success else Status.STOPPED
+        return result
+
     def finish(self):
         if self.status != Status.ACTIVE:
             raise RuntimeError("cannot finish")
