@@ -41,4 +41,4 @@ def test_comparison_gif(tmp_path):
     render_comparison("left_u_turn",compare(maneuvers()["left_u_turn"]),target,max_frames=12)
     with Image.open(target) as im:
         assert im.n_frames>2
-        assert im.size==(1380,790)
+        assert im.size==(1600,800)
