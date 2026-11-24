@@ -49,3 +49,23 @@ python -m adas_sim --scenario all
 ## Licensing
 
 No license has been granted by the initial scaffold; confirm a license before accepting contributions or redistributing code.
+
+
+## V0.2: comparison of kinodynamic parking planners
+
+New optional CLI command:
+
+```bash
+python -m pip install -e ".[test]"
+python -m pytest -q
+adas-benchmark --scenario parallel_left --algorithm all --iterations 1200 --seed 42
+adas-benchmark --scenario all --algorithm hybrid_astar
+```
+
+Each benchmark run saves `result.json`, `trajectory.svg`, `vehicle.gif`, plus aggregate `benchmark.csv` and `benchmark.json` under `output/benchmarks/`.
+
+Planner names: `hybrid_astar`, `rrt`, `rrt_star`, `fmt_star`. All share the same Ackermann motion integration, rectangle SAT collision checks and independent command replay. Sampling planners are deterministic per random seed. **The FMT implementation is FMT-inspired and is not canonical FMT*.** RRT* uses conservative exact-endpoint parent selection rather than general continuous steering rewiring; neither optimality nor probabilistic completeness is established.
+
+The GIF is a real plan replay in top-down 2D with scaled vehicle footprint, axle and heading markers, steering telemetry and time. A failed planner produces a no-path result; no replacement method is silently inserted. Parked obstacles are idealized rectangles. Steering rate, velocity ramping, sensor error and continuous swept collision checks remain future work.
+
+For reproducible performance claims, compare success rates over multiple seeds and identical budgets; individual wall times depend on machine and are not physical driving times.
