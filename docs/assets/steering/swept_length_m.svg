@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+<rect width="100%" height="100%" fill="#eef3f9"/>
+<rect width="1280" height="74" fill="#102038"/>
+<text x="24" y="40" font-size="22" fill="#fff" font-family="sans-serif">Swept longitudinal extent</text>
+<line x1="135" y1="585.0" x2="1232" y2="585.0" stroke="#cbd5e1"/>
+<text x="120" y="590.0" text-anchor="end" font-size="15" fill="#1d2d46">0.00</text>
+<line x1="135" y1="467.5" x2="1232" y2="467.5" stroke="#cbd5e1"/>
+<text x="120" y="472.5" text-anchor="end" font-size="15" fill="#1d2d46">4.00</text>
+<line x1="135" y1="350.0" x2="1232" y2="350.0" stroke="#cbd5e1"/>
+<text x="120" y="355.0" text-anchor="end" font-size="15" fill="#1d2d46">8.00</text>
+<line x1="135" y1="232.5" x2="1232" y2="232.5" stroke="#cbd5e1"/>
+<text x="120" y="237.5" text-anchor="end" font-size="15" fill="#1d2d46">12.00</text>
+<line x1="135" y1="115.0" x2="1232" y2="115.0" stroke="#cbd5e1"/>
+<text x="120" y="120.0" text-anchor="end" font-size="15" fill="#1d2d46">16.00</text>
+<rect x="163.8" y="345.4" width="79.5" height="239.6" fill="#2563eb"/>
+<text x="203.6" y="335.4" font-size="14" fill="#1d2d46" text-anchor="middle">8.15m</text>
+<text x="203.6" y="611.0" font-size="14" fill="#1d2d46" text-anchor="middle">left u turn 2WS</text>
+<rect x="300.9" y="363.0" width="79.5" height="222.0" fill="#d97706"/>
+<text x="340.7" y="353.0" font-size="14" fill="#1d2d46" text-anchor="middle">7.56m</text>
+<text x="340.7" y="611.0" font-size="14" fill="#1d2d46" text-anchor="middle">left u turn 4WS</text>
+<rect x="438.0" y="345.4" width="79.5" height="239.6" fill="#2563eb"/>
+<text x="477.8" y="335.4" font-size="14" fill="#1d2d46" text-anchor="middle">8.15m</text>
+<text x="477.8" y="611.0" font-size="14" fill="#1d2d46" text-anchor="middle">right u turn 2WS</text>
+<rect x="575.2" y="363.0" width="79.5" height="222.0" fill="#d97706"/>
+<text x="614.9" y="353.0" font-size="14" fill="#1d2d46" text-anchor="middle">7.56m</text>
+<text x="614.9" y="611.0" font-size="14" fill="#1d2d46" text-anchor="middle">right u turn 4WS</text>
+<rect x="712.3" y="317.8" width="79.5" height="267.2" fill="#2563eb"/>
+<text x="752.1" y="307.8" font-size="14" fill="#1d2d46" text-anchor="middle">9.10m</text>
+<text x="752.1" y="611.0" font-size="14" fill="#1d2d46" text-anchor="middle">reverse arc 2WS</text>
+<rect x="849.4" y="354.6" width="79.5" height="230.4" fill="#d97706"/>
+<text x="889.2" y="344.6" font-size="14" fill="#1d2d46" text-anchor="middle">7.84m</text>
+<text x="889.2" y="611.0" font-size="14" fill="#1d2d46" text-anchor="middle">reverse arc 4WS</text>
+<rect x="986.5" y="373.8" width="79.5" height="211.2" fill="#2563eb"/>
+<text x="1026.3" y="363.8" font-size="14" fill="#1d2d46" text-anchor="middle">7.19m</text>
+<text x="1026.3" y="611.0" font-size="14" fill="#1d2d46" text-anchor="middle">parking s bend 2WS</text>
+<rect x="1123.7" y="377.2" width="79.5" height="207.8" fill="#d97706"/>
+<text x="1163.4" y="367.2" font-size="14" fill="#1d2d46" text-anchor="middle">7.07m</text>
+<text x="1163.4" y="611.0" font-size="14" fill="#1d2d46" text-anchor="middle">parking s bend 4WS</text>
+<text x="24" y="693" font-size="14" fill="#64748b">Same metric: shared axis and color convention. Synthetic simulation.</text>
+</svg>
