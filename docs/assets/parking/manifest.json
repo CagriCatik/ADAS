@@ -1,0 +1,30 @@
+[
+  {
+    "scenario": "parallel_left",
+    "planner": "hybrid_astar",
+    "result": "PASS",
+    "frames": 81,
+    "path_steps": 80
+  },
+  {
+    "scenario": "parallel_right",
+    "planner": "hybrid_astar",
+    "result": "PASS",
+    "frames": 81,
+    "path_steps": 80
+  },
+  {
+    "scenario": "perpendicular_reverse",
+    "planner": "hybrid_astar",
+    "result": "PASS",
+    "frames": 113,
+    "path_steps": 112
+  },
+  {
+    "scenario": "open_bay",
+    "planner": "hybrid_astar",
+    "result": "PASS",
+    "frames": 73,
+    "path_steps": 72
+  }
+]
