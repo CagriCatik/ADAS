@@ -7,6 +7,7 @@ from adas_sim.planner import plan
 from adas_sim.validation import validate
 from adas_sim.animation import render_gif
 from adas_sim.svg import render
+from adas_sim.steering_benchmark import benchmark as steering_benchmark
 from adas_sim.control import execute
 from adas_sim.planner import Plan
 
@@ -27,6 +28,7 @@ def main():
         rows.append({"scenario":name,"planner":"hybrid_astar","result":result.result,
                      "frames":len(route.poses),"path_steps":len(route.commands),"actuator_status":replay.status})
         print(f"{name}: PASS -> {folder/name}.gif",flush=True)
+    steering_benchmark(Path("docs/assets/steering"))
     (folder/"manifest.json").write_text(json.dumps(rows,indent=2)+"\n",encoding="utf-8")
 
 if __name__=="__main__":
