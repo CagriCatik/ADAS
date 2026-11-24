@@ -1,69 +1,57 @@
-"""Render actual planned Ackermann vehicle motion as a 2D top-down GIF."""
+"""Uniform parking GIF renderer with one camera and shared visual grammar."""
 from __future__ import annotations
 import math
 from pathlib import Path
 from .geometry import vehicle_polygon, obstacle_polygon
-from .planner import Plan
-from .scenarios import Scenario
+from .planar_vehicle import planar_parts
+from .visualization.common import CAMERA, Camera, PALETTE, image_indices, decorate_pillow
 
-def render_gif(scene: Scenario, route: Plan, destination: str | Path,
-               fps: int = 16, speedup: float = 2.0, max_frames: int = 300):
+def render_gif(scene, route, destination, fps=None, speedup=None, max_frames=None):
     from PIL import Image, ImageDraw
-    if fps < 1 or speedup <= 0 or max_frames < 2:
-        raise ValueError("invalid GIF settings")
-    bounds=[(p.x,p.y) for p in route.poses]
-    for o in scene.obstacles:bounds.extend(obstacle_polygon(o))
-    for p in (scene.start,scene.goal):bounds.extend(vehicle_polygon(p,scene.vehicle))
-    xmin=min(x for x,y in bounds)-3
-    xmax=max(x for x,y in bounds)+3
-    ymin=min(y for x,y in bounds)-3
-    ymax=max(y for x,y in bounds)+3
-    w,h=1000,700
-    scale=min((w-80)/(xmax-xmin),(h-130)/(ymax-ymin))
-    def xy(t):
-        return int(40+(t[0]-xmin)*scale),int(h-50-(t[1]-ymin)*scale)
-    def shape(p,margin=0):
-        return [xy(q) for q in vehicle_polygon(p,scene.vehicle,margin)]
-    base=Image.new("RGB",(w,h),"#eff5fa")
-    draw=ImageDraw.Draw(base)
-    draw.rectangle((0,0,w,63),fill="#14213d")
-    for obstacle in scene.obstacles:
-        draw.polygon([xy(q) for q in obstacle_polygon(obstacle)],fill="#94a3b8",outline="#334155",width=3)
-    draw.polygon(shape(scene.start),fill="#c7d2fe",outline="#64748b",width=2)
-    draw.polygon(shape(scene.goal),fill="#bbf7d0",outline="#15803d",width=3)
-    trail=[xy((p.x,p.y)) for p in route.poses]
-    if len(trail)>1:draw.line(trail,fill="#a0aec0",width=3)
-    indices=[0]
-    if len(route.poses)>1:
-        stride=max(1,round(speedup/(fps*route.step_dt)))
-        indices=list(range(0,len(route.poses),stride))
-        if indices[-1]!=len(route.poses)-1:indices.append(len(route.poses)-1)
-        if len(indices)>max_frames:
-            stride=math.ceil((len(indices)-1)/(max_frames-1))
-            indices=indices[::stride]
-            if indices[-1]!=len(route.poses)-1:indices.append(len(route.poses)-1)
+    from dataclasses import replace
+    spec=CAMERA["parking"]
+    if fps is not None or speedup is not None or max_frames is not None:
+        spec=replace(spec, fps=fps if fps is not None else spec.fps,
+                     speedup=speedup if speedup is not None else spec.speedup,
+                     max_frames=max_frames if max_frames is not None else spec.max_frames)
+    cam=Camera(spec)
+    obstacles=[obstacle_polygon(o) for o in scene.obstacles]
+    all_points=[pt for poly in obstacles for pt in poly]
+    all_points.extend(pt for pose in (scene.start,scene.goal) for pt in vehicle_polygon(pose,scene.vehicle))
+    all_points.extend(pt for pose in route.poses for pt in vehicle_polygon(pose,scene.vehicle))
+    cam.assert_visible(all_points)
+    indices=image_indices(len(route.poses),route.step_dt,spec)
     frames=[]
-    for frame_idx,index in enumerate(indices):
-        image=base.copy()
-        d=ImageDraw.Draw(image)
-        if index>0:d.line(trail[:index+1],fill="#ea580c",width=4)
-        pose=route.poses[index]
-        d.polygon(shape(pose),fill="#2563eb",outline="#1e3a8a",width=3)
-        center=(pose.x+(scene.vehicle.length/2-scene.vehicle.rear_axle_from_center)*math.cos(pose.yaw),
-                pose.y+(scene.vehicle.length/2-scene.vehicle.rear_axle_from_center)*math.sin(pose.yaw))
-        front=(center[0]+1.5*math.cos(pose.yaw),center[1]+1.5*math.sin(pose.yaw))
-        d.line([xy(center),xy(front)],fill="white",width=5)
-        for offset in (0,scene.vehicle.wheelbase):
-            p=(pose.x+offset*math.cos(pose.yaw),pose.y+offset*math.sin(pose.yaw))
-            u,v=xy(p)
-            d.ellipse((u-4,v-4,u+4,v+4),fill="#fef08a")
-        command=route.commands[min(index,len(route.commands)-1)] if route.commands else None
-        steer=math.degrees(command.steer) if command else 0
-        speed=command.velocity if command else 0
-        d.text((20,22),f"ADAS | {scene.name} | {'PATH FOUND' if route.success else 'NO PATH'}",fill="white")
-        d.text((20,h-34),f"time {index*route.step_dt:.1f}s | steer {steer:+.1f}deg | speed {speed:+.1f}m/s | frame {frame_idx+1}/{len(indices)}",fill="#1f2937")
-        frames.append(image)
-    path=Path(destination)
-    path.parent.mkdir(parents=True,exist_ok=True)
+    full_path=[cam.xy((pose.x,pose.y)) for pose in route.poses]
+    for frame_no,idx in enumerate(indices):
+        im=Image.new("RGB",(spec.width,spec.height),PALETTE["background"])
+        draw=ImageDraw.Draw(im)
+        for poly in obstacles:
+            draw.polygon([cam.xy(p) for p in poly],fill=PALETTE["obstacle"],outline=PALETTE["obstacle_edge"],width=3)
+        draw.polygon([cam.xy(p) for p in vehicle_polygon(scene.start,scene.vehicle)],
+                     fill=PALETTE["start"],outline=PALETTE["2WS"],width=2)
+        draw.polygon([cam.xy(p) for p in vehicle_polygon(scene.goal,scene.vehicle)],
+                     fill=PALETTE["goal"],outline=PALETTE["goal_edge"],width=3)
+        if len(full_path)>1:draw.line(full_path,fill=PALETTE["planned"],width=3)
+        if idx>0:draw.line(full_path[:idx+1],fill=PALETTE["executed"],width=4)
+        pose=route.poses[idx]
+        command=route.commands[min(idx,len(route.commands)-1)] if route.commands else None
+        front=command.steer if command else 0.
+        rear=0.
+        body,*wheels=planar_parts(pose,scene.vehicle,front,rear)
+        draw.polygon([cam.xy(p) for p in body],fill="#d7e7fa",outline=PALETTE["2WS"],width=3)
+        for poly in wheels:
+            draw.polygon([cam.xy(p) for p in poly],fill=PALETTE["wheel"],outline="#ffffff",width=2)
+        draw.ellipse((cam.xy((pose.x,pose.y))[0]-4,cam.xy((pose.x,pose.y))[1]-4,
+                      cam.xy((pose.x,pose.y))[0]+4,cam.xy((pose.x,pose.y))[1]+4),fill=PALETTE["reference"])
+        elapsed=idx*route.step_dt
+        decorate_pillow(draw,spec,f"ADAS | PARKING | {scene.name}",
+                        f"Shared camera  {spec.pixels_per_meter:.0f} px/m  |  {'PATH' if route.success else 'FAILED'}: {route.reason}",
+                        f"t={elapsed:5.2f} s   speed={command.velocity if command else 0.:+4.1f} m/s   "
+                        f"front={math.degrees(front):+5.1f} deg   rear={math.degrees(rear):+5.1f} deg   "
+                        f"frame={frame_no+1}/{len(indices)}")
+        frames.append(im)
+    path=Path(destination);path.parent.mkdir(parents=True,exist_ok=True)
     frames[0].save(path,save_all=True,append_images=frames[1:],
-                   duration=max(30,round(1000/fps)),loop=0,optimize=True)
+                   duration=round(1000/spec.fps),loop=0,optimize=True)
+    return path

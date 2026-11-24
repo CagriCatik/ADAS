@@ -1,32 +1,35 @@
-"""Dependency-free deterministic SVG scenario renderer."""
+"""Uniform SVG scene plot at exactly the parking GIF's world scale."""
+from __future__ import annotations
 from pathlib import Path
 from html import escape
-from .geometry import obstacle_polygon, vehicle_polygon
-from .scenarios import Scenario
-from .planner import Plan
+from .geometry import obstacle_polygon,vehicle_polygon
+from .visualization.common import CAMERA,Camera,PALETTE
 
-
-def render(s: Scenario, p: Plan, out: str | Path) -> None:
-    polygons = [obstacle_polygon(o) for o in s.obstacles]
-    polygons.extend([vehicle_polygon(s.start, s.vehicle), vehicle_polygon(s.goal, s.vehicle)])
-    points = [xy for poly in polygons for xy in poly] + [(q.x, q.y) for q in p.poses]
-    x0 = min(x for x, y in points) - 2
-    x1 = max(x for x, y in points) + 2
-    y0 = min(y for x, y in points) - 2
-    y1 = max(y for x, y in points) + 2
-    scale = 42
-    w, h = (x1 - x0) * scale, (y1 - y0) * scale
-    def xy(q):
-        return f"{(q[0] - x0) * scale:.1f},{(y1 - q[1]) * scale:.1f}"
-    def poly(q, fill, stroke):
-        return f'<polygon points="{" ".join(xy(z) for z in q)}" fill="{fill}" stroke="{stroke}" stroke-width="2"/>'
-    parts = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w:.0f} {h:.0f}">', '<rect width="100%" height="100%" fill="#f8fafc"/>']
-    parts.extend(poly(q, "#9ca3af", "#374151") for q in polygons[:-2])
-    parts.append(poly(polygons[-2], "#bfdbfe", "#1d4ed8"))
-    parts.append(poly(polygons[-1], "#bbf7d0", "#15803d"))
-    if len(p.poses) > 1:
-        parts.append(f'<polyline points="{" ".join(xy((q.x, q.y)) for q in p.poses)}" fill="none" stroke="#e11d48" stroke-width="2.5"/>')
-    parts.append(f'<text x="15" y="24" fill="#111827" font-family="sans-serif" font-size="17">{escape(s.name)} — {"PLANNED" if p.success else p.reason}</text>')
-    parts.append("</svg>")
-    Path(out).parent.mkdir(parents=True, exist_ok=True)
-    Path(out).write_text("\n".join(parts), encoding="utf-8")
+def render(s,p,out):
+    spec=CAMERA["parking"];cam=Camera(spec)
+    obstacles=[obstacle_polygon(o) for o in s.obstacles]
+    body_start=vehicle_polygon(s.start,s.vehicle)
+    body_goal=vehicle_polygon(s.goal,s.vehicle)
+    polys=obstacles+[body_start,body_goal]
+    points=[point for poly in polys for point in poly]
+    points += [point for pose in p.poses for point in vehicle_polygon(pose,s.vehicle)]
+    cam.assert_visible(points)
+    def poly(points,fill,outline):
+        coords=" ".join(f"{x},{y}" for x,y in map(cam.xy,points))
+        return f'<polygon points="{coords}" fill="{fill}" stroke="{outline}" stroke-width="2"/>'
+    rows=[f'<svg xmlns="http://www.w3.org/2000/svg" width="{spec.width}" height="{spec.height}" viewBox="0 0 {spec.width} {spec.height}">',
+          f'<rect width="{spec.width}" height="{spec.height}" fill="{PALETTE["background"]}"/>',
+          f'<rect width="{spec.width}" height="{spec.header_height}" fill="{PALETTE["header"]}"/>',
+          f'<text x="24" y="34" fill="#fff" font-size="20" font-family="sans-serif">ADAS | PARKING | {escape(s.name)}</text>',
+          f'<text x="24" y="59" fill="#c7d2fe" font-size="14" font-family="sans-serif">Shared camera: {spec.pixels_per_meter:.0f} px/m | {escape(p.reason)}</text>']
+    rows.extend(poly(obs,PALETTE["obstacle"],PALETTE["obstacle_edge"]) for obs in obstacles)
+    rows.append(poly(body_start,PALETTE["start"],PALETTE["2WS"]))
+    rows.append(poly(body_goal,PALETTE["goal"],PALETTE["goal_edge"]))
+    if len(p.poses)>1:
+        coords=" ".join(f"{x},{y}" for x,y in (cam.xy((pose.x,pose.y)) for pose in p.poses))
+        rows.append(f'<polyline points="{coords}" fill="none" stroke="{PALETTE["executed"]}" stroke-width="4"/>')
+    rows.append(f'<rect y="{spec.height-spec.footer_height}" width="{spec.width}" height="{spec.footer_height}" fill="#e2e8f0"/>')
+    rows.append(f'<text x="24" y="{spec.height-22}" font-size="15" fill="{PALETTE["text"]}" font-family="sans-serif">Planar 2D | synthetic simulation | fixed-scale scenario family</text>')
+    rows.append("</svg>")
+    out=Path(out);out.parent.mkdir(parents=True,exist_ok=True)
+    out.write_text("\n".join(rows)+"\n",encoding="utf-8")
