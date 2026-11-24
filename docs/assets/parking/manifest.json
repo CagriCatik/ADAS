@@ -4,27 +4,31 @@
     "planner": "hybrid_astar",
     "result": "PASS",
     "frames": 81,
-    "path_steps": 80
+    "path_steps": 80,
+    "actuator_status": "PASS"
   },
   {
     "scenario": "parallel_right",
     "planner": "hybrid_astar",
     "result": "PASS",
     "frames": 81,
-    "path_steps": 80
+    "path_steps": 80,
+    "actuator_status": "PASS"
   },
   {
     "scenario": "perpendicular_reverse",
     "planner": "hybrid_astar",
     "result": "PASS",
     "frames": 113,
-    "path_steps": 112
+    "path_steps": 112,
+    "actuator_status": "TRACKING_ERROR"
   },
   {
     "scenario": "open_bay",
     "planner": "hybrid_astar",
     "result": "PASS",
     "frames": 73,
-    "path_steps": 72
+    "path_steps": 72,
+    "actuator_status": "TRACKING_ERROR"
   }
 ]
