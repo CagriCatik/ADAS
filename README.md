@@ -107,3 +107,24 @@ The baseline comparison feeds **identical front-steering and speed commands** in
 Run `python -m adas_sim.steering_benchmark` to generate reproducible GIFs and `results.csv`/`results.json`. `scripts/generate_gallery.py` and the GIF CI workflow commit outputs into `docs/assets/steering/`.
 
 **Next:** replan each parking target for 2WS and 4WS separately; compare goal arrival, body swept space, clearance and gear changes under a shared collision checker. The current 4WS steering law is a low-speed kinematic adaptation, not a direct import of the Vehicle-Dynamics plant.
+
+
+## Interactive V0.2 workbench and safety/plant extensions
+
+Launch the local **2D planar parking workbench**:
+
+```bash
+python -m pip install -e ".[test]"
+adas-workbench --host 127.0.0.1 --port 8766
+```
+
+Visit [http://127.0.0.1:8766](http://127.0.0.1:8766) for selectable parking scenarios, playback controls, four-wheel vehicle rendering and telemetry. This is a read-only visualization of planned kinematic paths, not a physically validated interactive driving simulator.
+
+Additional modules:
+- `trajectory.py`: collision-checked trajectory replay and gear-aware speed envelope (no full Reeds-Shepp or curvature-continuous smoother yet).
+- `control.py`: steering-rate, acceleration, braking and gear-dwell-limited execution; reports tracking errors honestly.
+- `sensors.py`: synthetic ultrasonic ray-casting and seeded localization noise.
+- `supervisor.py`: explicit stop/replan state machine for changed obstacles and missing localization.
+- `vehicle_adapter.py`: optional Vehicle-Dynamics **kinematic single-track** bridge with verified rear-axle/CoG coordinate conversion; **not** a seven-DOF adapter.
+
+Read the [V0.2 engineering status, implementation boundaries and limitations](docs/engineering-v02.md).
