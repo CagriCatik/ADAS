@@ -43,3 +43,8 @@ def test_supervisor_stops_if_localization_is_lost():
 def test_workbench_visualizes_four_wheels():
     assert "for(const axle of [0,v.wheelbase])" in _HTML
     assert "/api/scenario/" in _HTML
+
+def test_embedded_workbench_javascript_newline_escaping():
+    assert chr(92) + "nStatus:" in _HTML
+    assert chr(92) + "nTime:" in _HTML
+    assert chr(92) + "nSpeed:" in _HTML
