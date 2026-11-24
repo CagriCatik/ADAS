@@ -33,4 +33,4 @@ def test_gif_contains_multiple_planar_vehicle_frames(tmp_path):
     render_gif(scene,route,target,fps=10)
     with Image.open(target) as im:
         assert im.n_frames > 1
-        assert im.size == (1000,700)
+        assert im.size == (1280,720)
