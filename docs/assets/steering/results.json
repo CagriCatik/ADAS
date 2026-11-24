@@ -1,0 +1,90 @@
+[
+  {
+    "maneuver": "left_u_turn",
+    "architecture": "2WS",
+    "path_length_m": 8.0,
+    "heading_change_deg": 92.324,
+    "effective_radius_m": 4.965,
+    "swept_width_m": 9.199,
+    "swept_length_m": 8.155,
+    "front_steer_max_deg": 30.0,
+    "rear_steer_max_deg": 0.0
+  },
+  {
+    "maneuver": "left_u_turn",
+    "architecture": "4WS",
+    "path_length_m": 8.0,
+    "heading_change_deg": 116.281,
+    "effective_radius_m": 3.942,
+    "swept_width_m": 9.375,
+    "swept_length_m": 7.559,
+    "front_steer_max_deg": 30.0,
+    "rear_steer_max_deg": 9.0
+  },
+  {
+    "maneuver": "right_u_turn",
+    "architecture": "2WS",
+    "path_length_m": 8.0,
+    "heading_change_deg": -92.324,
+    "effective_radius_m": 4.965,
+    "swept_width_m": 9.199,
+    "swept_length_m": 8.155,
+    "front_steer_max_deg": 30.0,
+    "rear_steer_max_deg": 0.0
+  },
+  {
+    "maneuver": "right_u_turn",
+    "architecture": "4WS",
+    "path_length_m": 8.0,
+    "heading_change_deg": -116.281,
+    "effective_radius_m": 3.942,
+    "swept_width_m": 9.375,
+    "swept_length_m": 7.559,
+    "front_steer_max_deg": 30.0,
+    "rear_steer_max_deg": 9.0
+  },
+  {
+    "maneuver": "reverse_arc",
+    "architecture": "2WS",
+    "path_length_m": 5.6,
+    "heading_change_deg": -64.236,
+    "effective_radius_m": 4.995,
+    "swept_width_m": 6.017,
+    "swept_length_m": 9.097,
+    "front_steer_max_deg": 30.0,
+    "rear_steer_max_deg": 0.0
+  },
+  {
+    "maneuver": "reverse_arc",
+    "architecture": "4WS",
+    "path_length_m": 5.6,
+    "heading_change_deg": -80.913,
+    "effective_radius_m": 3.965,
+    "swept_width_m": 6.766,
+    "swept_length_m": 7.843,
+    "front_steer_max_deg": 30.0,
+    "rear_steer_max_deg": 9.0
+  },
+  {
+    "maneuver": "parking_s_bend",
+    "architecture": "2WS",
+    "path_length_m": 6.2,
+    "heading_change_deg": 48.789,
+    "effective_radius_m": 7.281,
+    "swept_width_m": 5.47,
+    "swept_length_m": 7.191,
+    "front_steer_max_deg": 30.0,
+    "rear_steer_max_deg": 0.0
+  },
+  {
+    "maneuver": "parking_s_bend",
+    "architecture": "4WS",
+    "path_length_m": 6.2,
+    "heading_change_deg": 61.424,
+    "effective_radius_m": 5.783,
+    "swept_width_m": 6.16,
+    "swept_length_m": 7.073,
+    "front_steer_max_deg": 30.0,
+    "rear_steer_max_deg": 9.0
+  }
+]

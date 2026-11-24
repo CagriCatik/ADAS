@@ -1,0 +1,9 @@
+maneuver,architecture,path_length_m,heading_change_deg,effective_radius_m,swept_width_m,swept_length_m,front_steer_max_deg,rear_steer_max_deg
+left_u_turn,2WS,8.0,92.324,4.965,9.199,8.155,30.0,0.0
+left_u_turn,4WS,8.0,116.281,3.942,9.375,7.559,30.0,9.0
+right_u_turn,2WS,8.0,-92.324,4.965,9.199,8.155,30.0,0.0
+right_u_turn,4WS,8.0,-116.281,3.942,9.375,7.559,30.0,9.0
+reverse_arc,2WS,5.6,-64.236,4.995,6.017,9.097,30.0,0.0
+reverse_arc,4WS,5.6,-80.913,3.965,6.766,7.843,30.0,9.0
+parking_s_bend,2WS,6.2,48.789,7.281,5.47,7.191,30.0,0.0
+parking_s_bend,4WS,6.2,61.424,5.783,6.16,7.073,30.0,9.0
