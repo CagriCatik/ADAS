@@ -89,3 +89,21 @@ Generate locally: `python scripts/generate_gallery.py`. The planner GIFs show ex
 - **Implemented:** Hybrid A*, seeded RRT / limited RRT* / FMT-inspired variants, sampled polygon collision checking, planner benchmarks, plan-replay GIFs, deterministic ultrasonic ray-cast and localization noise, discrete-horizon emergency-stop guard, feedforward steering rate / acceleration / gear dwell.
 - **Not yet implemented:** fully constrained Reeds-Shepp connector, trajectory smoothing/optimization, closed-loop MPC, parking-space perception from raw sensor data, dynamic-obstacle replanning, live interactive GUI, validated 7-DOF Vehicle-Dynamics adapter. The optional adapter interface deliberately raises `NotImplementedError` until correctly mapped.
 
+
+
+## Planar 2WS vs 4WS benchmark (Vehicle-Dynamics-inspired)
+
+The 2D vehicle renderer now draws **a body polygon and four individual tire polygons**, with visible front and rear steering, actual wheelbase/track and correctly oriented rear-axle midpoint pose. At parking speed the rear axle follows a limited counter-phase steering ratio `delta_rear = -0.30 * delta_front` (maximum 10 degrees), inspired by the existing [Vehicle-Dynamics 4WS coordinator](https://github.com/CagriCatik/Vehicle-Dynamics/blob/main/src/vehicle_model/steering/four_wheel_steering.py). Both front and rear steering are rate limited.
+
+The baseline comparison feeds **identical front-steering and speed commands** into 2WS and 4WS; the resulting final poses therefore differ. These are paired *maneuverability experiments*, not proof of identical-target autonomous parking success or a full dynamic coupling to the external 7-DOF model.
+
+| Maneuver | 2WS vs 4WS planar animation |
+| --- | --- |
+| Left turn | ![Left turn 2WS vs 4WS](docs/assets/steering/left_u_turn_2ws_vs_4ws.gif) |
+| Right turn | ![Right turn 2WS vs 4WS](docs/assets/steering/right_u_turn_2ws_vs_4ws.gif) |
+| Reverse arc | ![Reverse arc 2WS vs 4WS](docs/assets/steering/reverse_arc_2ws_vs_4ws.gif) |
+| Parking S-bend | ![Parking S-bend 2WS vs 4WS](docs/assets/steering/parking_s_bend_2ws_vs_4ws.gif) |
+
+Run `python -m adas_sim.steering_benchmark` to generate reproducible GIFs and `results.csv`/`results.json`. `scripts/generate_gallery.py` and the GIF CI workflow commit outputs into `docs/assets/steering/`.
+
+**Next:** replan each parking target for 2WS and 4WS separately; compare goal arrival, body swept space, clearance and gear changes under a shared collision checker. The current 4WS steering law is a low-speed kinematic adaptation, not a direct import of the Vehicle-Dynamics plant.
