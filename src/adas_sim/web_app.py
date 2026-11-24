@@ -12,7 +12,7 @@ from urllib.parse import urlsplit
 from .planner import plan
 from .scenarios import SCENARIOS
 
-_HTML = """<!doctype html>
+_HTML = r"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ADAS · Planar Parking Workbench</title>
