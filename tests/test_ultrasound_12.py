@@ -9,8 +9,10 @@ def test_twelve_unique_bumper_channels():
     channels=default_channels()
     assert len(channels)==12
     assert len({c.id for c in channels})==12
-    assert [c.id for c in channels[:6]]==[f"F{i:02}" for i in range(1,7)]
-    assert [c.id for c in channels[6:]]==[f"R{i:02}" for i in range(1,7)]
+    assert [c.id for c in channels[:4]]==[f"F{i:02}" for i in range(1,5)]
+    assert [c.id for c in channels[4:8]]==[f"R{i:02}" for i in range(1,5)]
+    assert [c.id for c in channels[8:]]==["SLF","SRF","SLR","SRR"]
+    assert all(c.role=="slot_survey" for c in channels[8:])
     assert all(c.min_range_m<c.max_range_m for c in channels)
 
 def test_mounts_follow_vehicle_rotation():

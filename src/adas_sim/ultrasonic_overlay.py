@@ -10,8 +10,8 @@ import math
 
 STATUS_COLOR = {"DETECTED":"#f59e0b","NO_ECHO":"#94a3b8",
                 "INTERFERENCE":"#fb7185","DROPOUT":"#fb7185"}
-IDS = tuple([*(f"F{i:02}" for i in range(1,7)),
-             *(f"R{i:02}" for i in range(1,7))])
+IDS = tuple([*(f"F{i:02}" for i in range(1,5)),
+             *(f"R{i:02}" for i in range(1,5)), "SLF", "SRF", "SLR", "SRR"])
 
 @dataclass
 class SensorArtists:
@@ -59,7 +59,7 @@ class UltrasonicOverlay:
             artist.marker.set_facecolor(color)
             artist.marker.set_edgecolor("#ffffff" if active else "#64748b")
             artist.marker.set_linewidth(1.8 if active else .55)
-            front=e["id"].startswith("F")
+            front=e["id"].startswith("F") or e["id"] in ("SLF","SRF")
             artist.label.set_position((x+(.33 if front else -.33),y))
             artist.label.set_ha("left" if front else "right")
             artist.label.set_color("#fff7cc" if active else color)
@@ -81,18 +81,19 @@ class UltrasonicOverlay:
                                         (active["origin_y"],active["hit_y"]))
 
 def status_table(echoes,active_id):
-    """Six rows, each displaying front and rear channel state and range."""
+    """Four rows display front, rear and side sensors in parallel columns."""
     by_id={e["id"]:e for e in echoes}
+    columns=(("F01","R01","SLF"),("F02","R02","SRF"),
+             ("F03","R03","SLR"),("F04","R04","SRR"))
     rows=[]
-    for i in range(1,7):
-        both=[]
-        for side in "FR":
-            cid=f"{side}{i:02}"
+    for ids in columns:
+        parts=[]
+        for cid in ids:
             e=by_id[cid]
             active=">" if cid==active_id else " "
             state={"DETECTED":"HIT","NO_ECHO":"CLEAR","INTERFERENCE":"X-TALK",
                    "DROPOUT":"DROP"}.get(e["status"],"UNKNOWN")
-            value=f"{e['range_m']:4.2f}m" if e["range_m"] is not None else " --  "
-            both.append(f"{active}{cid} {state:6} {value}")
-        rows.append("  ".join(both))
+            value=f"{e['range_m']:4.2f}" if e["range_m"] is not None else " -- "
+            parts.append(f"{active}{cid} {state:6} {value}")
+        rows.append(" | ".join(parts))
     return rows

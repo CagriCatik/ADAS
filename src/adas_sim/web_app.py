@@ -34,9 +34,9 @@ aside{background:#19263b;padding:16px;border-radius:10px}
 <header><label>Scenario <select id="scene"></select></label>
 <button id="run">Load & replay</button><button id="play">Pause</button>
 <label>Step <input id="seek" type="range" min="0" value="0"></label><label><input id="beams" type="checkbox" checked> All 12 FoVs</label><label><input id="pulse" type="checkbox" checked> Active TX / echo</label></header>
-<p>Sensor-first simulation: survey → measured gap → size/quality decision → plan only when permitted. All 12 transducers and ID labels remain visible. One TDMA transmitter is highlighted; overlapping static FoVs are not acoustic crosstalk.</p>
+<p>Sensor-first simulation: survey → measured gap → size/quality decision → plan only when permitted. Four front, four rear and four side-mounted transducers remain visible. One TDMA transmitter is highlighted; overlapping static FoVs are not acoustic crosstalk.</p>
 <main><canvas id="world" width="1000" height="625"></canvas>
-<aside><h3>Telemetry</h3><pre id="stats">Select a scenario.</pre><h3>Ultrasonic channels (6 front / 6 rear)</h3><div id="sensorGrid"></div><p style="font-size:12px;color:#94a3b8">Idealized ray-cast echoes; not calibrated OEM sensor data.</p></aside></main>
+<aside><h3>Telemetry</h3><pre id="stats">Select a scenario.</pre><h3>PLA channels (4 front / 4 rear / 4 side)</h3><div id="sensorGrid"></div><p style="font-size:12px;color:#94a3b8">Idealized ray-cast echoes; not calibrated OEM sensor data.</p></aside></main>
 <script>
 const $ = id=>document.getElementById(id);
 const ctx=$("world").getContext("2d");
@@ -97,7 +97,7 @@ function sensors(p){
    ctx.fillStyle=colour;ctx.fill();
    ctx.strokeStyle=active?"#ffffff":"#475569";
    ctx.lineWidth=active?2.3:1;ctx.stroke();
-   const front=e.id.startsWith("F");
+   const front=e.id.startsWith("F")||e.id==="SLF"||e.id==="SRF";
    const labelX=px[0]+(front?11:-11);
    ctx.font=(active?"bold ":"")+"11px monospace";
    ctx.textAlign=front?"left":"right";

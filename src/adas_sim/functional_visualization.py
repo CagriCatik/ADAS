@@ -80,8 +80,8 @@ def render_case(name,out="docs/assets/functional_parking",*,max_frames=20):
     axes=[fig.add_subplot(traces[i,0]) for i in range(3)]
     plots=((overview,"measured search + conditional parking"),
            (close,"12 sensors / all FoVs + active TX"),
-           (axes[0],"nearest valid front echo [m]"),
-           (axes[1],"nearest valid rear echo [m]"),
+           (axes[0],"left-side slot range [m]"),
+           (axes[1],"right-side slot range [m]"),
            (axes[2],"valid channels / 12"))
     for ax,title in plots:
         ax.set_facecolor(AXES)
@@ -115,8 +115,8 @@ def render_case(name,out="docs/assets/functional_parking",*,max_frames=20):
     times=[f["time_s"] for f in frames]
     front=[];rear=[];valid=[]
     for frame in frames:
-        fr=[e["range_m"] for e in frame["echoes"] if e["id"].startswith("F") and e["status"]=="DETECTED"]
-        rr=[e["range_m"] for e in frame["echoes"] if e["id"].startswith("R") and e["status"]=="DETECTED"]
+        fr=[e["range_m"] for e in frame["echoes"] if e["id"] in ("SLF","SLR") and e["status"]=="DETECTED"]
+        rr=[e["range_m"] for e in frame["echoes"] if e["id"] in ("SRF","SRR") and e["status"]=="DETECTED"]
         front.append(min(fr) if fr else math.nan)
         rear.append(min(rr) if rr else math.nan)
         valid.append(sum(e["status"]=="DETECTED" for e in frame["echoes"]))
@@ -169,8 +169,8 @@ def render_case(name,out="docs/assets/functional_parking",*,max_frames=20):
         lines=[f"STATE: {state}",f"PHASE: {frame['stage']}",
                f"Time: {frame['time_s']:.1f} s",f"Slot: {slot_len}",
                f"TX: {active_id or 'CONFLICT'} | {data['tx_mode'].upper()}",
-               f"Hits: {valid[i]}/12","",
-               "FRONT                     REAR",
+               f"Valid echoes: {valid[i]}/12","",
+               "FRONT | REAR | SIDE (PLA)",
                *status_table(frame["echoes"],active_id),"",
                f"PLAN: {data['path_steps'] if state=='PARK_ALLOWED' else 0} steps",
                f"REASON: {data['reason'] if state!='SEARCHING' else 'survey incomplete'}"]

@@ -17,12 +17,12 @@ def test_12_mounted_markers_and_optional_fields_of_view():
         overlay.update(measurements,active_id="F03")
         assert len(overlay.channels)==12
         assert [c.label.get_text() for c in overlay.channels]==[
-            *(f"F{i:02}" for i in range(1,7)),
-            *(f"R{i:02}" for i in range(1,7))]
+            *(f"F{i:02}" for i in range(1,5)),
+            *(f"R{i:02}" for i in range(1,5)), "SLF", "SRF", "SLR", "SRR"]
         assert all(c.marker.get_visible() for c in overlay.channels)
         assert all(c.footprint.get_visible() for c in overlay.channels)
         assert sum(c.marker.get_linewidth()>1 for c in overlay.channels)==1
-        overlay.update(measurements,active_id="R06",show_fovs=False)
+        overlay.update(measurements,active_id="SRR",show_fovs=False)
         assert all(c.marker.get_visible() for c in overlay.channels)
         assert all(not c.footprint.get_visible() for c in overlay.channels)
     finally:
