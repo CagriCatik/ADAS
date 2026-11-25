@@ -23,7 +23,7 @@ _HTML = r"""<!doctype html>
 body{max-width:1250px;margin:auto;padding:24px}
 h1{font-weight:650}header{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
 select,button,input{font:inherit;padding:8px;background:#1e293b;color:#f8fafc;border:1px solid #475569;border-radius:6px}
-main{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:18px}
+main{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:18px}
 canvas{width:100%;aspect-ratio:16/10;background:#0f172a;border:1px solid #334155;border-radius:10px}
 aside{background:#19263b;padding:16px;border-radius:10px}
 #sensorGrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}
@@ -33,8 +33,8 @@ aside{background:#19263b;padding:16px;border-radius:10px}
 </style></head><body><h1>ADAS · 2D Planar Parking Workbench</h1>
 <header><label>Scenario <select id="scene"></select></label>
 <button id="run">Load & replay</button><button id="play">Pause</button>
-<label>Step <input id="seek" type="range" min="0" value="0"></label><label><input id="beams" type="checkbox" checked> Ultrasound FoV (12 ch)</label></header>
-<p>Sensor-first simulation: survey → measured gap → size/quality decision → plan only when permitted. One highlighted TDMA transmitter; interference is a measurement fault, not overlapping FoV.</p>
+<label>Step <input id="seek" type="range" min="0" value="0"></label><label><input id="beams" type="checkbox" checked> All 12 FoVs</label><label><input id="pulse" type="checkbox" checked> Active TX / echo</label></header>
+<p>Sensor-first simulation: survey → measured gap → size/quality decision → plan only when permitted. All 12 transducers and ID labels remain visible. One TDMA transmitter is highlighted; overlapping static FoVs are not acoustic crosstalk.</p>
 <main><canvas id="world" width="1000" height="625"></canvas>
 <aside><h3>Telemetry</h3><pre id="stats">Select a scenario.</pre><h3>Ultrasonic channels (6 front / 6 rear)</h3><div id="sensorGrid"></div><p style="font-size:12px;color:#94a3b8">Idealized ray-cast echoes; not calibrated OEM sensor data.</p></aside></main>
 <script>
@@ -54,35 +54,69 @@ function vehicle(p,steer){
    rect(x,y,p.yaw+(axle?steer:0),.60,.225,"#080d1c","#f8fafc");
  }
 }
-function sensors(p){ 
+function sensors(p){
  const echoes=data.ultrasound[frame]||[];
- if($("beams").checked && data.tx_mode==="tdma")echoes.filter((e,i)=>i===frame%12).forEach(e=>{
+ const activeIndex=frame%12;
+ const activeId=data.tx_mode==="tdma" && echoes.length===12?echoes[activeIndex].id:null;
+ function drawBeam(e,highlight){
    const start=e.heading_rad-e.opening_angle_rad/2;
    const end=e.heading_rad+e.opening_angle_rad/2;
-   const n=16;
-   const left=map(e.origin_x,e.origin_y);
-   ctx.beginPath();ctx.moveTo(...left);
-   for(let k=0;k<=n;k++){
-     const a=start+(end-start)*k/n;
+   const center=map(e.origin_x,e.origin_y);
+   ctx.beginPath();ctx.moveTo(...center);
+   for(let k=0;k<=20;k++){
+     const a=start+(end-start)*k/20;
      const pt=map(e.origin_x+e.max_range_m*Math.cos(a),e.origin_y+e.max_range_m*Math.sin(a));
      ctx.lineTo(...pt);
    }
    ctx.closePath();
-   ctx.fillStyle=e.status==="DETECTED"?"rgba(245,158,11,0.13)":"rgba(56,189,248,0.07)";
+   ctx.fillStyle=highlight?"rgba(56,189,248,0.19)":"rgba(56,189,248,0.025)";
    ctx.fill();
-   ctx.strokeStyle="rgba(56,189,248,0.22)";ctx.lineWidth=1;ctx.stroke();
-   ctx.beginPath();ctx.arc(...left,3,0,Math.PI*2);ctx.fillStyle="#38bdf8";ctx.fill();
-   if(e.status==="DETECTED"&&e.hit_x!==null){
-     const hit=map(e.hit_x,e.hit_y);
-     ctx.beginPath();ctx.moveTo(...left);ctx.lineTo(...hit);
-     ctx.strokeStyle="#f59e0b";ctx.lineWidth=2;ctx.stroke();
-     ctx.beginPath();ctx.arc(...hit,4,0,Math.PI*2);ctx.fillStyle="#fbbf24";ctx.fill();
+   ctx.strokeStyle=highlight?"rgba(56,189,248,0.78)":"rgba(56,189,248,0.12)";
+   ctx.lineWidth=highlight?1.7:0.6;ctx.stroke();
+ }
+ if($("beams").checked)echoes.forEach(e=>drawBeam(e,false));
+ if($("pulse").checked && activeId){
+   const active=echoes[activeIndex];
+   if(active.status==="DETECTED"||active.status==="NO_ECHO")drawBeam(active,true);
+   if(active.status==="DETECTED"&&active.hit_x!==null){
+     const origin=map(active.origin_x,active.origin_y);
+     const hit=map(active.hit_x,active.hit_y);
+     ctx.beginPath();ctx.moveTo(...origin);ctx.lineTo(...hit);
+     ctx.strokeStyle="#f59e0b";ctx.lineWidth=2.3;ctx.stroke();
+     ctx.beginPath();ctx.arc(...hit,4,0,Math.PI*2);
+     ctx.fillStyle="#fbbf24";ctx.fill();
    }
+ }
+ // All 12 physical transducers and IDs remain visible, even without a beam.
+ echoes.forEach(e=>{
+   const active=e.id===activeId;
+   const px=map(e.origin_x,e.origin_y);
+   const colour=(e.status==="INTERFERENCE"||e.status==="DROPOUT")?"#fb7185":
+                e.status==="DETECTED"?"#fbbf24":"#94a3b8";
+   ctx.beginPath();ctx.arc(...px,active?5.3:3.9,0,Math.PI*2);
+   ctx.fillStyle=colour;ctx.fill();
+   ctx.strokeStyle=active?"#ffffff":"#475569";
+   ctx.lineWidth=active?2.3:1;ctx.stroke();
+   const front=e.id.startsWith("F");
+   const labelX=px[0]+(front?11:-11);
+   ctx.font=(active?"bold ":"")+"11px monospace";
+   ctx.textAlign=front?"left":"right";
+   ctx.textBaseline="middle";
+   const tw=ctx.measureText(e.id).width;
+   const left=front?labelX-3:labelX-tw-3;
+   ctx.fillStyle="rgba(11,17,32,0.80)";
+   ctx.fillRect(left,px[1]-8,tw+6,16);
+   ctx.fillStyle=colour;ctx.fillText(e.id,labelX,px[1]);
  });
  $("sensorGrid").replaceChildren(...echoes.map(e=>{
    const div=document.createElement("div");
-   div.className="sensor "+(e.status==="DETECTED"?"hit":(e.status==="DROPOUT"||e.status==="INTERFERENCE")?"fail":"clear");
-   div.textContent=e.id+"  "+(e.range_m===null?"--":e.range_m.toFixed(2)+" m");
+   const active=e.id===activeId;
+   div.className="sensor "+(e.status==="DETECTED"?"hit":
+          (e.status==="DROPOUT"||e.status==="INTERFERENCE")?"fail":"clear");
+   if(active){div.style.outline="1px solid #f8fafc";div.style.fontWeight="bold"}
+   const value=e.range_m===null?"--":e.range_m.toFixed(2)+"m";
+   const state=e.status==="INTERFERENCE"?"X-TALK":e.status;
+   div.textContent=(active?"> ":"  ")+e.id+" "+value+" "+state;
    div.title=e.status;
    return div;
  }));
@@ -91,12 +125,12 @@ function draw(){
  ctx.clearRect(0,0,1000,625);ctx.fillStyle="#0f172a";ctx.fillRect(0,0,1000,625);
  if(!data)return;
  data.obstacles.forEach(o=>rect(o.x,o.y,o.yaw,o.length,o.width,"#64748b","#94a3b8"));
- sensors(data.poses[frame]);
  const g=data.goal;if(g && frame>=data.survey_samples-1)rect(g.x,g.y,g.yaw,data.vehicle.length,data.vehicle.width,"#064e3b","#10b981");
  ctx.strokeStyle="#d95926";ctx.lineWidth=2;ctx.beginPath();
  data.poses.slice(0,frame+1).forEach((p,i)=>{let [x,y]=map(p.x,p.y);i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke();
  const p=data.poses[frame],cmd=data.commands[Math.min(frame,data.commands.length-1)];
  vehicle(p,cmd?cmd.steer:0);
+ sensors(p);
  const finishedScan=frame>=data.survey_samples-1;
  const decision=finishedScan?data.status:"SEARCHING";
  const details=finishedScan?data.reason:"collecting ultrasonic range observations";
@@ -121,6 +155,7 @@ async function init(){
  await load();
 }
 $("beams").onchange=draw;
+$("pulse").onchange=draw;
 $("run").onclick=load;$("play").onclick=()=>{playing=!playing;$("play").textContent=playing?"Pause":"Play"};
 $("seek").oninput=()=>{frame=Number($("seek").value);playing=false;$("play").textContent="Play";draw()};
 setInterval(()=>{if(!playing||!data||frame>=data.poses.length-1)return;frame=Math.min(data.poses.length-1,frame+3);$("seek").value=frame;draw()},80);
