@@ -11,6 +11,7 @@ from pathlib import Path
 from .sensor_demo import build_case_payload
 from .geometry import Pose,Rectangle,Vehicle,obstacle_polygon,vehicle_polygon
 from .planar_vehicle import planar_parts
+from .ultrasonic_overlay import UltrasonicOverlay, status_table
 
 BG="#0b1120"
 AXES="#0f172a"
@@ -57,7 +58,7 @@ def _move_vehicle(artists,pose,vehicle,front_steer):
         patch.set_xy(pts)
 
 def render_case(name,out="docs/assets/functional_parking",*,max_frames=20):
-    from matplotlib.patches import Polygon,Wedge,Circle
+    from matplotlib.patches import Polygon
     from matplotlib.animation import FuncAnimation,PillowWriter
     from PIL import Image
     plt=_theme()
@@ -78,7 +79,7 @@ def render_case(name,out="docs/assets/functional_parking",*,max_frames=20):
     traces=layout[1].subgridspec(3,1)
     axes=[fig.add_subplot(traces[i,0]) for i in range(3)]
     plots=((overview,"measured search + conditional parking"),
-           (close,"planar vehicle + active ultrasound"),
+           (close,"12 sensors / all FoVs + active TX"),
            (axes[0],"nearest valid front echo [m]"),
            (axes[1],"nearest valid rear echo [m]"),
            (axes[2],"valid channels / 12"))
@@ -106,15 +107,11 @@ def render_case(name,out="docs/assets/functional_parking",*,max_frames=20):
     parktrail,=overview.plot([],[],color=GREEN,lw=2.,label="authorized parking")
     car_over=_vehicle(overview,vehicle)
     car_close=_vehicle(close,vehicle)
-    active_sector=Wedge((0,0),4.5,0,1,fc=CYAN,ec=CYAN,alpha=.13,lw=.8,zorder=3)
-    close.add_patch(active_sector)
-    echo_dot=Circle((0,0),.085,fc=AMBER,visible=False,zorder=12)
-    close.add_patch(echo_dot)
-    echo_line,=close.plot([],[],color=AMBER,lw=2,zorder=10)
+    ultrasound=UltrasonicOverlay(close)
     target=Polygon([(0,0)]*4,closed=True,fc=GREEN,ec=GREEN,alpha=.2,visible=False,zorder=3)
     overview.add_patch(target)
     limits=[overview.axvline(0,color=GREEN,ls=":",lw=1.2,visible=False) for _ in range(2)]
-    hudtext=hud.text(.02,.98,"",va="top",family="monospace",fontsize=8.4,transform=hud.transAxes)
+    hudtext=hud.text(.02,.98,"",va="top",family="monospace",fontsize=7.15,transform=hud.transAxes)
     times=[f["time_s"] for f in frames]
     front=[];rear=[];valid=[]
     for frame in frames:
@@ -161,34 +158,22 @@ def render_case(name,out="docs/assets/functional_parking",*,max_frames=20):
                 limit.set_xdata((x,x));limit.set_visible(True)
         else:
             for limit in limits:limit.set_visible(False)
-        close.set_xlim(pose.x-6.8,pose.x+6.8)
-        close.set_ylim(pose.y-6.,pose.y+6.)
+        close.set_xlim(pose.x-5.3,pose.x+5.3)
+        close.set_ylim(pose.y-4.7,pose.y+4.7)
         active=frame["echoes"][i%12]
-        valid_beam=active["status"] in ("DETECTED","NO_ECHO") and data["tx_mode"]=="tdma"
-        active_sector.set_visible(valid_beam)
-        if valid_beam:
-            active_sector.set_center((active["origin_x"],active["origin_y"]))
-            active_sector.set_radius(active["max_range_m"])
-            active_sector.set_theta1(math.degrees(active["heading_rad"]-active["opening_angle_rad"]/2))
-            active_sector.set_theta2(math.degrees(active["heading_rad"]+active["opening_angle_rad"]/2))
-        detected=valid_beam and active["status"]=="DETECTED" and active["hit_x"] is not None
-        echo_dot.set_visible(detected)
-        if detected:
-            echo_dot.center=(active["hit_x"],active["hit_y"])
-            echo_line.set_data([active["origin_x"],active["hit_x"]],
-                               [active["origin_y"],active["hit_y"]])
-        else:echo_line.set_data([],[])
+        active_id=active["id"] if data["tx_mode"]=="tdma" else None
+        ultrasound.update(frame["echoes"],active_id=active_id,show_fovs=True)
         state="SEARCHING" if i<survey_count-1 else data["status"]
         colour=GREEN if state=="PARK_ALLOWED" else RED if state=="NO_PARK" else CYAN
         slot_len=f'{slot["certified_length_m"]:.2f} m' if slot else "--"
         lines=[f"STATE: {state}",f"PHASE: {frame['stage']}",
-               f"t: {frame['time_s']:.1f} s","",
-               f"Slot: {slot_len}","Required: >=5.10 m",
-               f"Sender: {active['id']}",f"Pulse mode: {data['tx_mode'].upper()}",
-               f"Measurement: {active['status']}",
-               f"Detected: {valid[i]}/12","",
-               f"REASON: {data['reason'] if state!='SEARCHING' else 'survey incomplete'}","",
-               f"Plan commands: {data['path_steps'] if state=='PARK_ALLOWED' else 0}"]
+               f"Time: {frame['time_s']:.1f} s",f"Slot: {slot_len}",
+               f"TX: {active_id or 'CONFLICT'} | {data['tx_mode'].upper()}",
+               f"Hits: {valid[i]}/12","",
+               "FRONT                     REAR",
+               *status_table(frame["echoes"],active_id),"",
+               f"PLAN: {data['path_steps'] if state=='PARK_ALLOWED' else 0} steps",
+               f"REASON: {data['reason'] if state!='SEARCHING' else 'survey incomplete'}"]
         hudtext.set_text("\n".join(lines))
         hudtext.set_color(colour)
         for cursor in cursors:
@@ -198,11 +183,11 @@ def render_case(name,out="docs/assets/functional_parking",*,max_frames=20):
     gif=destination/f"{name}.gif"
     animation=FuncAnimation(fig,update,frames=len(indices),interval=130,blit=False)
     try:
-        animation.save(gif,writer=PillowWriter(fps=8),dpi=80)
+        animation.save(gif,writer=PillowWriter(fps=8),dpi=100)
         update(len(indices)-1)
-        fig.savefig(destination/f"{name}.png",dpi=95)
+        fig.savefig(destination/f"{name}.png",dpi=110)
     finally:
         plt.close(fig)
     with Image.open(gif) as image:
-        assert image.n_frames>=3 and image.size==(1280,720)
+        assert image.n_frames>=3 and image.size==(1600,900)
     return data
