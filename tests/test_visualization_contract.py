@@ -51,7 +51,8 @@ def test_gif_and_svg_use_identical_parking_canvas(tmp_path):
     render_svg(scene,trajectory,svg)
     with Image.open(gif) as image:
         assert image.size == (1280,720)
-    assert 'viewBox="0 0' in svg.read_text()\n    assert "matplotlib" in svg.read_text().lower()
+    assert 'viewBox="0 0' in svg.read_text()
+    assert "matplotlib" in svg.read_text().lower()
 
 def test_two_wheel_comparison_has_shared_panels(tmp_path):
     pair=compare(maneuvers()["left_u_turn"])
