@@ -11,6 +11,7 @@ from importlib.resources import files
 from urllib.parse import urlsplit
 from .planner import plan
 from .scenarios import SCENARIOS
+from .ultrasound_12 import scan_12
 
 _HTML = r"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
@@ -21,17 +22,20 @@ _HTML = r"""<!doctype html>
 body{max-width:1250px;margin:auto;padding:24px}
 h1{font-weight:650}header{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
 select,button,input{font:inherit;padding:8px;background:#1e293b;color:#f8fafc;border:1px solid #475569;border-radius:6px}
-main{display:grid;grid-template-columns:minmax(0,1fr) 240px;gap:18px}
-canvas{width:100%;aspect-ratio:16/10;background:#eaf0f5;border-radius:10px}
+main{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:18px}
+canvas{width:100%;aspect-ratio:16/10;background:#0f172a;border:1px solid #334155;border-radius:10px}
 aside{background:#19263b;padding:16px;border-radius:10px}
+#sensorGrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}
+.sensor{background:#0f172a;border:1px solid #334155;border-radius:5px;padding:7px;font:12px monospace}
+.sensor.hit{border-color:#f59e0b;color:#fbbf24}.sensor.clear{color:#94a3b8}.sensor.fail{border-color:#f43f5e;color:#f43f5e}
 @media(max-width:750px){main{grid-template-columns:1fr}}
 </style></head><body><h1>ADAS · 2D Planar Parking Workbench</h1>
 <header><label>Scenario <select id="scene"></select></label>
 <button id="run">Load & replay</button><button id="play">Pause</button>
-<label>Step <input id="seek" type="range" min="0" value="0"></label></header>
-<p>Simulated plans only · fixed camera 29 px/m · rear-axle pose · four-wheel vehicle drawing</p>
+<label>Step <input id="seek" type="range" min="0" value="0"></label><label><input id="beams" type="checkbox" checked> Ultrasound FoV (12 ch)</label></header>
+<p>Simulated plans only · 12 bumper-mounted acoustic fan beams · blue = detection cone · amber = valid echo · red = fault</p>
 <main><canvas id="world" width="1000" height="625"></canvas>
-<aside><h3>Telemetry</h3><pre id="stats">Select a scenario.</pre></aside></main>
+<aside><h3>Telemetry</h3><pre id="stats">Select a scenario.</pre><h3>Ultrasonic channels (6 front / 6 rear)</h3><div id="sensorGrid"></div><p style="font-size:12px;color:#94a3b8">Idealized ray-cast echoes; not calibrated OEM sensor data.</p></aside></main>
 <script>
 const $ = id=>document.getElementById(id);
 const ctx=$("world").getContext("2d");
@@ -43,18 +47,52 @@ function rect(cx,cy,yaw,length,width,fill,stroke){const c=Math.cos(yaw),s=Math.s
 function vehicle(p,steer){
  const v=data.vehicle,c=Math.cos(p.yaw),s=Math.sin(p.yaw);
  const shift=v.length/2-v.rear_axle_from_center;
- rect(p.x+shift*c,p.y+shift*s,p.yaw,v.length,v.width,"#c7d2fe","#2563eb");
+ rect(p.x+shift*c,p.y+shift*s,p.yaw,v.length,v.width,"#155e75","#38bdf8");
  for(const axle of [0,v.wheelbase])for(const side of [-.8,.8]){
    const x=p.x+axle*c-side*s,y=p.y+axle*s+side*c;
-   rect(x,y,p.yaw+(axle?steer:0),.60,.225,"#1e293b","#f8fafc");
+   rect(x,y,p.yaw+(axle?steer:0),.60,.225,"#080d1c","#f8fafc");
  }
 }
+function sensors(p){ 
+ const echoes=data.ultrasound[frame]||[];
+ if($("beams").checked)echoes.forEach(e=>{
+   const start=e.heading_rad-e.opening_angle_rad/2;
+   const end=e.heading_rad+e.opening_angle_rad/2;
+   const n=16;
+   const left=map(e.origin_x,e.origin_y);
+   ctx.beginPath();ctx.moveTo(...left);
+   for(let k=0;k<=n;k++){
+     const a=start+(end-start)*k/n;
+     const pt=map(e.origin_x+e.max_range_m*Math.cos(a),e.origin_y+e.max_range_m*Math.sin(a));
+     ctx.lineTo(...pt);
+   }
+   ctx.closePath();
+   ctx.fillStyle=e.status==="DETECTED"?"rgba(245,158,11,0.13)":"rgba(56,189,248,0.07)";
+   ctx.fill();
+   ctx.strokeStyle="rgba(56,189,248,0.22)";ctx.lineWidth=1;ctx.stroke();
+   ctx.beginPath();ctx.arc(...left,3,0,Math.PI*2);ctx.fillStyle="#38bdf8";ctx.fill();
+   if(e.status==="DETECTED"&&e.hit_x!==null){
+     const hit=map(e.hit_x,e.hit_y);
+     ctx.beginPath();ctx.moveTo(...left);ctx.lineTo(...hit);
+     ctx.strokeStyle="#f59e0b";ctx.lineWidth=2;ctx.stroke();
+     ctx.beginPath();ctx.arc(...hit,4,0,Math.PI*2);ctx.fillStyle="#fbbf24";ctx.fill();
+   }
+ });
+ $("sensorGrid").replaceChildren(...echoes.map(e=>{
+   const div=document.createElement("div");
+   div.className="sensor "+(e.status==="DETECTED"?"hit":e.status==="DROPOUT"?"fail":"clear");
+   div.textContent=e.id+"  "+(e.range_m===null?"--":e.range_m.toFixed(2)+" m");
+   div.title=e.status;
+   return div;
+ }));
+}
 function draw(){
- ctx.clearRect(0,0,1000,625);ctx.fillStyle="#eaf0f5";ctx.fillRect(0,0,1000,625);
+ ctx.clearRect(0,0,1000,625);ctx.fillStyle="#0f172a";ctx.fillRect(0,0,1000,625);
  if(!data)return;
- data.obstacles.forEach(o=>rect(o.x,o.y,o.yaw,o.length,o.width,"#94a3b8"));
- const g=data.goal;rect(g.x,g.y,g.yaw,data.vehicle.length,data.vehicle.width,"#bbf7d0","#16a34a");
- ctx.strokeStyle="#f97316";ctx.lineWidth=2;ctx.beginPath();
+ data.obstacles.forEach(o=>rect(o.x,o.y,o.yaw,o.length,o.width,"#64748b","#94a3b8"));
+ sensors(data.poses[frame]);
+ const g=data.goal;rect(g.x,g.y,g.yaw,data.vehicle.length,data.vehicle.width,"#064e3b","#10b981");
+ ctx.strokeStyle="#d95926";ctx.lineWidth=2;ctx.beginPath();
  data.poses.slice(0,frame+1).forEach((p,i)=>{let [x,y]=map(p.x,p.y);i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke();
  const p=data.poses[frame],cmd=data.commands[Math.min(frame,data.commands.length-1)];
  vehicle(p,cmd?cmd.steer:0);
@@ -73,6 +111,7 @@ async function init(){
  names.forEach(x=>{let o=document.createElement("option");o.textContent=x;o.value=x;$("scene").appendChild(o)});
  await load();
 }
+$("beams").onchange=draw;
 $("run").onclick=load;$("play").onclick=()=>{playing=!playing;$("play").textContent=playing?"Pause":"Play"};
 $("seek").oninput=()=>{frame=Number($("seek").value);playing=false;$("play").textContent="Play";draw()};
 setInterval(()=>{if(!playing||!data||frame>=data.poses.length-1)return;frame=Math.min(data.poses.length-1,frame+3);$("seek").value=frame;draw()},80);
@@ -97,7 +136,9 @@ class Handler(BaseHTTPRequestHandler):
                              "commands":[asdict(c) for c in route.commands],
                              "vehicle":asdict(scene.vehicle),
                              "obstacles":[asdict(o) for o in scene.obstacles],
-                             "goal":asdict(scene.goal)}).encode()
+                             "goal":asdict(scene.goal),
+                             "ultrasound":[[asdict(e) for e in scan_12(p,scene.obstacles,vehicle=scene.vehicle,seed=i)]
+                                           for i,p in enumerate(route.poses)]}).encode()
             ctype="application/json"
         else:
             self.send_error(404);return
