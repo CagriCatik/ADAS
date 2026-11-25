@@ -1,0 +1,58 @@
+[
+  {
+    "case": "measured_left_gap",
+    "decision": "PARK_ALLOWED",
+    "reason": "sensor_verified_slot_and_path",
+    "survey_frames": 116,
+    "transmit_mode": "tdma",
+    "detected_gap_m": 7.46,
+    "slot_goal_x_m": 6.6,
+    "slot_goal_y_m": 2.371,
+    "parking_commands": 120,
+    "collision_free_replay": true,
+    "acoustic_model": "idealized_12ch_TDMA_with_interference_quality_flags",
+    "planning_source": "only_reconstructed_ultrasonic_map"
+  },
+  {
+    "case": "measured_right_gap",
+    "decision": "PARK_ALLOWED",
+    "reason": "sensor_verified_slot_and_path",
+    "survey_frames": 116,
+    "transmit_mode": "tdma",
+    "detected_gap_m": 7.46,
+    "slot_goal_x_m": 6.6,
+    "slot_goal_y_m": -2.371,
+    "parking_commands": 120,
+    "collision_free_replay": true,
+    "acoustic_model": "idealized_12ch_TDMA_with_interference_quality_flags",
+    "planning_source": "only_reconstructed_ultrasonic_map"
+  },
+  {
+    "case": "too_short_gap",
+    "decision": "NO_PARK",
+    "reason": "slot_too_short",
+    "survey_frames": 116,
+    "transmit_mode": "tdma",
+    "detected_gap_m": null,
+    "slot_goal_x_m": null,
+    "slot_goal_y_m": null,
+    "parking_commands": 0,
+    "collision_free_replay": false,
+    "acoustic_model": "idealized_12ch_TDMA_with_interference_quality_flags",
+    "planning_source": "only_reconstructed_ultrasonic_map"
+  },
+  {
+    "case": "acoustic_interference",
+    "decision": "NO_PARK",
+    "reason": "unreliable_acoustic_measurements",
+    "survey_frames": 116,
+    "transmit_mode": "simultaneous",
+    "detected_gap_m": null,
+    "slot_goal_x_m": null,
+    "slot_goal_y_m": null,
+    "parking_commands": 0,
+    "collision_free_replay": false,
+    "acoustic_model": "idealized_12ch_TDMA_with_interference_quality_flags",
+    "planning_source": "only_reconstructed_ultrasonic_map"
+  }
+]
