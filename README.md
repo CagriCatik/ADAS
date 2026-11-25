@@ -114,7 +114,7 @@ Read the [V0.2 engineering status, implementation boundaries and limitations](do
 **Parking is no longer authorized from a predefined scenario goal.**
 The 12 ultrasonic transducers acquire range observations along a straight
 survey drive. `parking_perception.py` identifies occupied regions using
-side-looking front/rear channels, requires two measured boundaries and repeated
+the dedicated front/rear side-looking PLA channels, requires two measured boundaries and repeated
 NO_ECHO evidence inside the candidate, applies a conservative clearance
 margin, and derives the target pose and obstacle estimates from measurements.
 
@@ -199,7 +199,7 @@ new functional decision benchmark produces primary reference results.
 ### 12-channel overlay V2 (hardware versus acoustic activity)
 
 The planar dashboard and local web workbench now show **all twelve real mounting
-positions at every frame**, labelled `F01`–`F06` and `R01`–`R06`.
+positions at every frame**, labelled `F01`–`F04`, `R01`–`R04` and the four dedicated side channels `SLF`, `SRF`, `SLR`, `SRR`.
 Each channel has a faint permanent FoV and a state indicator:
 
 - Amber: valid obstacle echo (`DETECTED`).
@@ -220,3 +220,9 @@ dashboard. Behavioral slot acceptance and denial logic remains owned by
 they are not individual real-time acoustic wave-propagation subframes.
 TDMA collisions are flagged by the simplified `acoustic_schedule.py`, not
 derived from an OEM transducer waveform model.
+
+### PLA transducer placement (4 front + 4 rear + 4 lateral)
+
+This project models **Parking Assistant only**, not a separate parking-distance-warning product. Four bumper-facing transducers protect the front approach, four protect reversing, and four laterally oriented transducers are positioned at the sides of the front and rear bumper corners for scanning spaces while passing. IDs: `F01-F04`, `R01-R04`, `SLF`, `SRF`, `SLR`, `SRR`. The PLA parking-gap detector uses `SLF/SLR` on the left or `SRF/SRR` on the right, requiring independent confirmation by both side sensors. The other eight channels remain available for obstacle monitoring. The geometric mount values are **synthetic, not measured OEM specifications**.
+
+Both the local web viewer and the animated functional GIFs use the same 12-channel placement. The gateway rejects missing or interfered readings instead of declaring an unmeasured area clear. Numeric benchmark results remain authoritative over GIF appearance.
