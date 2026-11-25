@@ -20,7 +20,7 @@ def main():
         result=validate(scene,route)
         if result.result!="PASS":
             raise RuntimeError(f"refusing to publish failed {name}: {result}")
-        render_gif(scene,route,folder/f"{name}.gif",fps=8,speedup=4,max_frames=50)
+        render_gif(scene,route,folder/f"{name}.gif",fps=10,speedup=4,max_frames=18)
         render(scene,route,folder/f"{name}.svg")
         replay=execute(scene,route)
         dynamic=Plan(replay.poses,replay.commands,replay.dt,0,replay.status=="PASS",replay.status)
