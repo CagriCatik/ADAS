@@ -165,7 +165,8 @@ def _update_vehicle(art, pose, steer_f, steer_r, vehicle):
         wheel.set_xy(polygon)
 
 def render_runs(runs, destination, title, *, scene=None, family="parking",
-                vehicle=Vehicle(), fps=10, playback=4.0, max_frames=50):
+                vehicle=Vehicle(), fps=10, playback=4.0, max_frames=50,
+                snapshot=False):
     """Publish recorded, true-scale histories in the Vehicle-Dynamics layout."""
     if not runs or family not in VIEW_LIMITS or fps<=0 or playback<=0 or max_frames<2:
         raise ValueError("invalid renderer inputs")
@@ -230,7 +231,13 @@ def render_runs(runs, destination, title, *, scene=None, family="parking",
 
     dest=Path(destination)
     dest.parent.mkdir(parents=True,exist_ok=True)
-    anim=FuncAnimation(fig,update,frames=len(times),interval=1000/fps,blit=False)
-    try: anim.save(dest,writer=PillowWriter(fps=fps),dpi=80)
-    finally: plt.close(fig)
+    try:
+        if snapshot:
+            update(len(times)-1)
+            fig.savefig(dest, format="svg", dpi=80)
+        else:
+            anim=FuncAnimation(fig,update,frames=len(times),interval=1000/fps,blit=False)
+            anim.save(dest,writer=PillowWriter(fps=fps),dpi=80)
+    finally:
+        plt.close(fig)
     return dest
