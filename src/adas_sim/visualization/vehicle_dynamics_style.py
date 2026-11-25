@@ -166,7 +166,7 @@ def _update_vehicle(art, pose, steer_f, steer_r, vehicle):
 
 def render_runs(runs, destination, title, *, scene=None, family="parking",
                 vehicle=Vehicle(), fps=10, playback=4.0, max_frames=50,
-                snapshot=False):
+                snapshot=False, ultrasound=False):
     """Publish recorded, true-scale histories in the Vehicle-Dynamics layout."""
     if not runs or family not in VIEW_LIMITS or fps<=0 or playback<=0 or max_frames<2:
         raise ValueError("invalid renderer inputs")
@@ -175,6 +175,11 @@ def render_runs(runs, destination, title, *, scene=None, family="parking",
     fig, overview, closeup, hud, traces = _prepare_axes(plt, title, runs, family)
     _place_objects(overview, scene)
     _place_objects(closeup, scene)
+    echoes_by_run = None
+    if ultrasound and scene is not None:
+        from ..ultrasound_12 import scan_12
+        echoes_by_run = [scan_12(p, scene.obstacles, vehicle=scene.vehicle, seed=i)
+                         for i, p in enumerate(runs[0].poses)]
     xs, ys = VIEW_LIMITS[family]
     for run in runs:
         for pose in run.poses:
@@ -198,6 +203,20 @@ def render_runs(runs, destination, title, *, scene=None, family="parking",
             ax.plot(t,values,color=colour,lw=1.2,label=run.label)
     overview.legend(loc="upper left",fontsize=8)
     detail = _artists(closeup,vehicle,COLOURS[0])
+    sectors, echo_dots, echo_lines = [], [], []
+    if echoes_by_run is not None:
+        from matplotlib.patches import Wedge, Circle
+        for channel in echoes_by_run[0]:
+            sector = Wedge((0, 0), channel.max_range_m, 0, 1,
+                           facecolor=CYAN, edgecolor=CYAN, lw=0.35,
+                           alpha=0.07, zorder=2)
+            dot = Circle((0, 0), .065, color="#f59e0b", visible=False, zorder=9)
+            line, = closeup.plot([], [], color="#f59e0b", lw=1.3, zorder=8)
+            closeup.add_patch(sector)
+            closeup.add_patch(dot)
+            sectors.append(sector)
+            echo_dots.append(dot)
+            echo_lines.append(line)
     detail_trail, = closeup.plot([p.x for p in runs[0].poses],
                                 [p.y for p in runs[0].poses],
                                 color=COLOURS[0], lw=.8, alpha=.3)
@@ -223,6 +242,26 @@ def render_runs(runs, destination, title, *, scene=None, family="parking",
         idx = _pose_at(first,t)
         pose = first.poses[idx]
         _update_vehicle(detail,pose,first.front[idx],first.rear[idx],vehicle)
+        if echoes_by_run is not None:
+            echoes = echoes_by_run[idx]
+            distances = []
+            for channel, sector, dot, line in zip(echoes,sectors,echo_dots,echo_lines):
+                sector.set_center((channel.origin_x, channel.origin_y))
+                sector.set_radius(channel.max_range_m)
+                sector.set_theta1(math.degrees(channel.heading_rad-channel.opening_angle_rad/2))
+                sector.set_theta2(math.degrees(channel.heading_rad+channel.opening_angle_rad/2))
+                detected = channel.status == "DETECTED"
+                dot.set_visible(detected)
+                if detected:
+                    dot.center = (channel.hit_x,channel.hit_y)
+                    line.set_data([channel.origin_x,channel.hit_x],
+                                  [channel.origin_y,channel.hit_y])
+                    distances.append(f"{channel.id}: {channel.range_m:.2f}m")
+                else:
+                    line.set_data([], [])
+                    distances.append(f"{channel.id}: --")
+            lines.extend(["ULTRASONIC | "+str(sum(e.status=="DETECTED" for e in echoes))+"/12",
+                          *["  ".join(distances[k:k+2]) for k in range(0,12,2)]])
         closeup.set_xlim(pose.x-6.0,pose.x+6.0)
         closeup.set_ylim(pose.y-6.0,pose.y+6.0)
         text.set_text("\n".join(lines))
@@ -234,7 +273,7 @@ def render_runs(runs, destination, title, *, scene=None, family="parking",
     try:
         if snapshot:
             update(len(times)-1)
-            fig.savefig(dest, format="svg", dpi=80)
+            fig.savefig(dest, format=dest.suffix.lstrip(".") or "png", dpi=95)
         else:
             anim=FuncAnimation(fig,update,frames=len(times),interval=1000/fps,blit=False)
             anim.save(dest,writer=PillowWriter(fps=fps),dpi=80)
