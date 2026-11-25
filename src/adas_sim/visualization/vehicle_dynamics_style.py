@@ -108,7 +108,7 @@ def _pose_at(run, t):
     return i
 
 def _prepare_axes(plt, title, runs, family):
-    fig = plt.figure(figsize=(16, 9))
+    fig = plt.figure(figsize=(16, 9) if family == "parking" else (20, 10))
     outer = fig.add_gridspec(1, 2, width_ratios=[1.75, 1.0])
     left = outer[0].subgridspec(2, 2, height_ratios=[0.9, 1.25],
                                  width_ratios=[1.0, 0.75])
@@ -116,7 +116,8 @@ def _prepare_axes(plt, title, runs, family):
     closeup = fig.add_subplot(left[1, 0])
     hud = fig.add_subplot(left[1, 1])
     hud.axis("off")
-    traces = [fig.add_subplot(outer[1].subgridspec(3, 1)[i]) for i in range(3)]
+    trace_grid = outer[1].subgridspec(3, 1)
+    traces = [fig.add_subplot(trace_grid[i, 0]) for i in range(3)]
     xlim, ylim = VIEW_LIMITS[family]
     overview.set_xlim(*xlim)
     overview.set_ylim(*ylim)
