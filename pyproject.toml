@@ -7,7 +7,7 @@ name = "adas-simulation-platform"
 version = "0.2.0"
 description = "Reproducible autonomous parking planning and simulation laboratory"
 requires-python = ">=3.10"
-dependencies = ["Pillow>=10.0"]
+dependencies = ["Pillow>=10.0", "matplotlib>=3.8"]
 
 [project.optional-dependencies]
 test = ["pytest>=8"]
