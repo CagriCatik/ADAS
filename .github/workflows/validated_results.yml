@@ -57,5 +57,7 @@ jobs:
           git add docs/assets/validated_results
           if ! git diff --cached --quiet; then
             git commit -m "docs: publish validated 12-USS scenario results [skip ci]"
+            git fetch origin main
+            git rebase origin/main
             git push
           fi
