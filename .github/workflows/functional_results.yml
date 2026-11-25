@@ -4,6 +4,8 @@ on:
     branches: [main]
     paths:
       - "src/adas_sim/functional_visualization.py"
+      - "src/adas_sim/ultrasonic_overlay.py"
+      - "src/adas_sim/web_app.py"
       - "src/adas_sim/parking_perception.py"
       - "src/adas_sim/sensor_driven_parking.py"
       - "src/adas_sim/sensor_demo.py"
