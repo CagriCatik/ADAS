@@ -12,6 +12,7 @@ from urllib.parse import urlsplit
 from .planner import plan
 from .scenarios import SCENARIOS
 from .ultrasound_12 import scan_12
+from .sensor_demo import CASES,build_case_payload
 
 _HTML = r"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
@@ -33,7 +34,7 @@ aside{background:#19263b;padding:16px;border-radius:10px}
 <header><label>Scenario <select id="scene"></select></label>
 <button id="run">Load & replay</button><button id="play">Pause</button>
 <label>Step <input id="seek" type="range" min="0" value="0"></label><label><input id="beams" type="checkbox" checked> Ultrasound FoV (12 ch)</label></header>
-<p>Simulated plans only · 12 bumper-mounted acoustic fan beams · blue = detection cone · amber = valid echo · red = fault</p>
+<p>Sensor-first simulation: survey → measured gap → size/quality decision → plan only when permitted. One highlighted TDMA transmitter; interference is a measurement fault, not overlapping FoV.</p>
 <main><canvas id="world" width="1000" height="625"></canvas>
 <aside><h3>Telemetry</h3><pre id="stats">Select a scenario.</pre><h3>Ultrasonic channels (6 front / 6 rear)</h3><div id="sensorGrid"></div><p style="font-size:12px;color:#94a3b8">Idealized ray-cast echoes; not calibrated OEM sensor data.</p></aside></main>
 <script>
@@ -55,7 +56,7 @@ function vehicle(p,steer){
 }
 function sensors(p){ 
  const echoes=data.ultrasound[frame]||[];
- if($("beams").checked)echoes.forEach(e=>{
+ if($("beams").checked && data.tx_mode==="tdma")echoes.filter((e,i)=>i===frame%12).forEach(e=>{
    const start=e.heading_rad-e.opening_angle_rad/2;
    const end=e.heading_rad+e.opening_angle_rad/2;
    const n=16;
@@ -80,7 +81,7 @@ function sensors(p){
  });
  $("sensorGrid").replaceChildren(...echoes.map(e=>{
    const div=document.createElement("div");
-   div.className="sensor "+(e.status==="DETECTED"?"hit":e.status==="DROPOUT"?"fail":"clear");
+   div.className="sensor "+(e.status==="DETECTED"?"hit":(e.status==="DROPOUT"||e.status==="INTERFERENCE")?"fail":"clear");
    div.textContent=e.id+"  "+(e.range_m===null?"--":e.range_m.toFixed(2)+" m");
    div.title=e.status;
    return div;
@@ -91,14 +92,22 @@ function draw(){
  if(!data)return;
  data.obstacles.forEach(o=>rect(o.x,o.y,o.yaw,o.length,o.width,"#64748b","#94a3b8"));
  sensors(data.poses[frame]);
- const g=data.goal;rect(g.x,g.y,g.yaw,data.vehicle.length,data.vehicle.width,"#064e3b","#10b981");
+ const g=data.goal;if(g && frame>=data.survey_samples-1)rect(g.x,g.y,g.yaw,data.vehicle.length,data.vehicle.width,"#064e3b","#10b981");
  ctx.strokeStyle="#d95926";ctx.lineWidth=2;ctx.beginPath();
  data.poses.slice(0,frame+1).forEach((p,i)=>{let [x,y]=map(p.x,p.y);i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke();
  const p=data.poses[frame],cmd=data.commands[Math.min(frame,data.commands.length-1)];
  vehicle(p,cmd?cmd.steer:0);
- $("stats").textContent="Scenario: "+data.name+"\nStatus: "+data.status+
- "\nTime: "+(frame*data.step_dt).toFixed(2)+"s\nSpeed: "+(cmd?cmd.velocity.toFixed(2):0)+"m/s"+
- "\nSteer: "+(cmd?(cmd.steer*180/Math.PI).toFixed(1):0)+"deg\nFrame: "+(frame+1)+"/"+data.poses.length;
+ const finishedScan=frame>=data.survey_samples-1;
+ const decision=finishedScan?data.status:"SEARCHING";
+ const details=finishedScan?data.reason:"collecting ultrasonic range observations";
+ const slotText=finishedScan && data.slot?data.slot.certified_length_m.toFixed(2)+" m":"--";
+ $("stats").textContent="Case: "+data.name+"\\nState: "+decision+
+ "\\nReason: "+details+"\\nPhase: "+data.phases[frame]+
+ "\\nTime: "+data.times[frame].toFixed(2)+"s"+
+ "\\nSlot: "+slotText+"\\nTX mode: "+data.tx_mode+
+ "\\nSpeed: "+(cmd?cmd.velocity.toFixed(2):0)+"m/s"+
+ "\\nSteer: "+(cmd?(cmd.steer*180/Math.PI).toFixed(1):0)+"deg"+
+ "\\nFrame: "+(frame+1)+"/"+data.poses.length;
 }
 async function load(){
  $("stats").textContent="Planning...";
@@ -124,21 +133,22 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/":
             body = _HTML.encode("utf-8");ctype="text/html; charset=utf-8"
         elif path == "/api/scenarios":
-            body=json.dumps(list(SCENARIOS)).encode();ctype="application/json"
+            body=json.dumps(list(CASES)).encode();ctype="application/json"
         elif path.startswith("/api/scenario/"):
             name=path.removeprefix("/api/scenario/")
-            if name not in SCENARIOS:
-                self.send_error(404, "Unknown scenario");return
-            scene=SCENARIOS[name]
-            route=plan(scene)
-            body=json.dumps({"name":name,"status":route.reason,"step_dt":route.step_dt,
-                             "poses":[asdict(p) for p in route.poses],
-                             "commands":[asdict(c) for c in route.commands],
-                             "vehicle":asdict(scene.vehicle),
-                             "obstacles":[asdict(o) for o in scene.obstacles],
-                             "goal":asdict(scene.goal),
-                             "ultrasound":[[asdict(e) for e in scan_12(p,scene.obstacles,vehicle=scene.vehicle,seed=i)]
-                                           for i,p in enumerate(route.poses)]}).encode()
+            if name not in CASES:
+                self.send_error(404, "Unknown case");return
+            report=build_case_payload(name)
+            frames=report["frames"]
+            report["poses"]=[f["pose"] for f in frames]
+            report["ultrasound"]=[f["echoes"] for f in frames]
+            report["commands"]=[{"steer":f["front_steer_rad"],"velocity":f["velocity_m_s"]}
+                                for f in frames]
+            report["times"]=[f["time_s"] for f in frames]
+            report["phases"]=[f["stage"] for f in frames]
+            report["goal"]=report["slot"]["goal"] if report["slot"] else None
+            report["step_dt"]=0.
+            body=json.dumps(report).encode()
             ctype="application/json"
         else:
             self.send_error(404);return
