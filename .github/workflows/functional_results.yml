@@ -9,8 +9,7 @@ on:
       - "src/adas_sim/sensor_demo.py"
       - "src/adas_sim/acoustic_schedule.py"
       - "src/adas_sim/ultrasound_12.py"
-      - "tests/test_parking_perception.py"
-      - "tests/test_functional_sensor_demo.py"
+      - "tests/**"
       - "scripts/publish_functional_results.py"
       - ".github/workflows/functional_results.yml"
   workflow_dispatch:
