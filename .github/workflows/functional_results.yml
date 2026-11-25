@@ -60,7 +60,7 @@ jobs:
               if row['decision']=='NO_PARK':
                   assert row['detected_gap_m'] is None
               with Image.open(base/f'{case}.gif') as gif:
-                  assert gif.n_frames>=3 and gif.size==(1280,720)
+                  assert gif.n_frames>=3 and gif.size==(1600,900)
               with Image.open(base/f'{case}.png') as png:png.verify()
               assert (base/f'{case}_survey.csv').is_file()
           PY
