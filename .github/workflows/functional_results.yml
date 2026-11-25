@@ -1,0 +1,74 @@
+name: Publish sensor-first parking evidence
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/adas_sim/functional_visualization.py"
+      - "src/adas_sim/parking_perception.py"
+      - "src/adas_sim/sensor_driven_parking.py"
+      - "src/adas_sim/sensor_demo.py"
+      - "src/adas_sim/acoustic_schedule.py"
+      - "src/adas_sim/ultrasound_12.py"
+      - "tests/test_parking_perception.py"
+      - "tests/test_functional_sensor_demo.py"
+      - "scripts/publish_functional_results.py"
+      - ".github/workflows/functional_results.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: functional-parking-results
+  cancel-in-progress: false
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install
+        run: python -m pip install -e ".[test]"
+      - name: Validate full test suite
+        run: python -m pytest -q
+      - name: Render sensor-gated scenarios
+        env:
+          MPLBACKEND: Agg
+        run: python scripts/publish_functional_results.py
+      - name: Validate evidence and publish on main
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from PIL import Image
+          base=Path('docs/assets/functional_parking')
+          data=json.loads((base/'summary.json').read_text())
+          expected={'measured_left_gap':'PARK_ALLOWED',
+                    'measured_right_gap':'PARK_ALLOWED',
+                    'too_short_gap':'NO_PARK',
+                    'acoustic_interference':'NO_PARK'}
+          assert len(data)==4
+          for row in data:
+              case=row['case']
+              assert row['decision']==expected[case]
+              assert (row['parking_commands']>0)==(row['decision']=='PARK_ALLOWED')
+              if row['decision']=='NO_PARK':
+                  assert row['detected_gap_m'] is None
+              with Image.open(base/f'{case}.gif') as gif:
+                  assert gif.n_frames>=3 and gif.size==(1280,720)
+              with Image.open(base/f'{case}.png') as png:png.verify()
+              assert (base/f'{case}_survey.csv').is_file()
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/assets/functional_parking
+          if ! git diff --cached --quiet; then
+            git commit -m "docs: publish functional ultrasonic park/no-park evidence [skip ci]"
+            git fetch origin main
+            git rebase origin/main
+            git push
+          fi
