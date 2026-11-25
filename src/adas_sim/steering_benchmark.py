@@ -45,21 +45,8 @@ def benchmark(out=Path("docs/assets/steering")):
     for name,commands in maneuvers().items():
         pair=compare(commands)
         rows.extend({"maneuver":name,**pair[mode][3]} for mode in ("2WS","4WS"))
-        render_comparison(name,pair,out/f"{name}_2ws_vs_4ws.gif")
+        render_comparison(name,pair,out/f"{name}_2ws_vs_4ws.gif",max_frames=18)
         print(name,pair["2WS"][3]["effective_radius_m"],pair["4WS"][3]["effective_radius_m"],flush=True)
-    from .visualization.plots import bar_chart
-    metrics = (
-        ("effective_radius_m", "Effective radius of driven path", 10.0, "m"),
-        ("swept_width_m", "Swept lateral extent", 16.0, "m"),
-        ("swept_length_m", "Swept longitudinal extent", 16.0, "m"),
-        ("rear_steer_max_deg", "Peak rear wheel steering", 12.0, "deg"),
-    )
-    for key, title, bound, suffix in metrics:
-        bar_chart([{"label": r["maneuver"].replace("_", " ") + " " + r["architecture"],
-                    **r} for r in rows],
-                  label_key="label", value_key=key,
-                  out=out / f"{key}.svg", title=title,
-                  group_key="architecture", suffix=suffix, y_max=bound)
     (out/"results.json").write_text(json.dumps(rows,indent=2)+"\n")
     with (out/"results.csv").open("w",newline="") as f:
         writer=csv.DictWriter(f,fieldnames=rows[0]);writer.writeheader();writer.writerows(rows)
