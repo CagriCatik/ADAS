@@ -45,6 +45,6 @@ def test_workbench_visualizes_four_wheels():
     assert "/api/scenario/" in _HTML
 
 def test_embedded_workbench_javascript_newline_escaping():
-    assert chr(92) + "nStatus:" in _HTML
+    assert chr(92) + "nState:" in _HTML
     assert chr(92) + "nTime:" in _HTML
     assert chr(92) + "nSpeed:" in _HTML
