@@ -24,10 +24,13 @@ class UltrasonicChannel:
     opening_angle_rad: float = radians(60)
     min_range_m: float = 0.20
     max_range_m: float = 4.5
+    role: str = "obstacle_monitor"
 
     def __post_init__(self):
         if not (0 < self.opening_angle_rad <= pi) or not (0 <= self.min_range_m < self.max_range_m):
             raise ValueError("invalid ultrasonic FoV or range")
+        if self.role not in ("obstacle_monitor", "slot_survey"):
+            raise ValueError("invalid ultrasonic role")
 
 
 @dataclass(frozen=True)
@@ -46,30 +49,27 @@ class Echo:
 
 
 def default_channels(vehicle: Vehicle = Vehicle()) -> tuple[UltrasonicChannel, ...]:
-    """Six front and six rear sensors, positioned on the body outline.
+    """PLA only: four forward, four rear and four side-facing bumper transducers.
 
-    Coordinates use the rear-axle midpoint, x forward and y left. Front and
-    rear units face outwards and are progressively angled towards the corners.
-    These synthetic placements are NOT an OEM bumper mounting specification.
+    Coordinates are referenced to the rear axle: +X forward, +Y vehicle left.
+    Side transducers are at the *sides* of the two bumper corners. The mounting
+    offsets are synthetic research assumptions, not OEM dimensions.
     """
-    front = vehicle.length - vehicle.rear_axle_from_center
-    rear = -vehicle.rear_axle_from_center
-    half_width = vehicle.width / 2
-    lateral = (-0.78, -0.48, -0.17, 0.17, 0.48, 0.78)
-    headings_front = (-65, -35, -10, 10, 35, 65)
-    headings_rear = (245, 215, 190, 170, 145, 115)
-    channels = [
-        UltrasonicChannel(f"F{i+1:02}", front-.08, half_width*v,
-                          radians(a), opening_angle_rad=radians(55))
-        for i,(v,a) in enumerate(zip(lateral,headings_front))
-    ]
-    channels += [
-        UltrasonicChannel(f"R{i+1:02}", rear+.08, half_width*v,
-                          radians(a), opening_angle_rad=radians(55))
-        for i,(v,a) in enumerate(zip(lateral,headings_rear))
-    ]
+    nose=vehicle.length-vehicle.rear_axle_from_center
+    tail=-vehicle.rear_axle_from_center
+    lateral=(-.70,-.23,.23,.70)
+    channels=[UltrasonicChannel(f"F{i:02}",nose-.025,y,radians(a),radians(55))
+              for i,(y,a) in enumerate(zip(lateral,(-28,-8,8,28)),1)]
+    channels.extend(UltrasonicChannel(f"R{i:02}",tail+.025,y,radians(a),radians(55))
+                    for i,(y,a) in enumerate(zip(lateral,(208,188,172,152)),1))
+    edge=vehicle.width/2-.04
+    for cid,x,y,angle in (("SLF",nose-.42,edge,90),
+                          ("SRF",nose-.42,-edge,-90),
+                          ("SLR",tail+.34,edge,90),
+                          ("SRR",tail+.34,-edge,-90)):
+        channels.append(UltrasonicChannel(cid,x,y,radians(angle),
+                                         radians(36),role="slot_survey"))
     return tuple(channels)
-
 
 def mount_world(pose: Pose, channel: UltrasonicChannel):
     c,s = cos(pose.yaw), sin(pose.yaw)

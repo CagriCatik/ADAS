@@ -6,6 +6,7 @@ produces INVALID data instead of fabricating parking-space measurements.
 """
 from __future__ import annotations
 from dataclasses import dataclass,replace
+from math import hypot
 from .ultrasound_12 import Echo
 
 @dataclass(frozen=True)
@@ -39,11 +40,13 @@ def invalidate_interference(echoes:tuple[Echo,...],pulses:tuple[Pulse,...],
     invalid=set()
     for i,e in enumerate(echoes):
         if e.id not in times:continue
-        for j,other in enumerate(echoes):
-            if i==j or other.id not in times:continue
-            if e.id[0]!=other.id[0]:continue
-            if abs(int(e.id[1:])-int(other.id[1:]))>1:continue
-            if abs(times[e.id]-times[other.id])<schedule.flight_window_s():
+        for other in echoes[i+1:]:
+            if other.id not in times:continue
+            # Crosstalk groups follow mounting geometry, not Fxx/Rxx naming.
+            # Acoustic coupling remains a simplified proximity model.
+            close=hypot(e.origin_x-other.origin_x,e.origin_y-other.origin_y)<1.9
+            overlapped=abs(times[e.id]-times[other.id])<schedule.flight_window_s()
+            if close and overlapped:
                 invalid.update((e.id,other.id))
     return tuple(replace(e,status="INTERFERENCE",range_m=None,hit_x=None,hit_y=None)
                  if e.id in invalid else e for e in echoes)

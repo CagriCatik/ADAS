@@ -79,19 +79,22 @@ def detect_parallel_gap(frames:tuple[SurveyFrame,...],side:str,
     if invalid>len(frames)*12*.20:
         return Perception("NO_SLOT","unreliable_acoustic_measurements",None)
     sign=1 if side=="left" else -1
-    front="F06" if sign>0 else "F01"
-    rear="R06" if sign>0 else "R01"
+    front="SLF" if sign>0 else "SRF"
+    rear="SLR" if sign>0 else "SRR"
     front_runs=_runs(frames,front,sign,settings)
     rear_runs=_runs(frames,rear,sign,settings)
     if len(front_runs)<2 or len(rear_runs)<2:
         return Perception("NO_SLOT","unbounded_or_unobserved_gap",None)
     short=False;unverified=False
     for i in range(min(len(front_runs),len(rear_runs))-1):
-        # Forward-facing side transducer leaves the first parked vehicle;
-        # rear-facing side transducer reaches the next one. The transition
-        # mount coordinates bound the gap; there is no oracle point access.
+        # Use side-facing front transducer transitions for both gap boundaries;
+        # the rear side transducer must independently confirm both vehicles.
         left=front_runs[i][-1][1].origin_x
-        right=rear_runs[i+1][0][1].origin_x
+        right=front_runs[i+1][0][1].origin_x
+        rear_left=rear_runs[i][-1][1].origin_x
+        rear_right=rear_runs[i+1][0][1].origin_x
+        if abs(left-rear_left)>1.0 or abs(right-rear_right)>1.0:
+            continue
         certified=right-left-2*settings.boundary_uncertainty_m
         if certified<vehicle.length+settings.min_clearance_m:
             short=True;continue
@@ -113,16 +116,19 @@ def detect_parallel_gap(frames:tuple[SurveyFrame,...],side:str,
         cx=(left+right)/2
         cy=face+sign*settings.assumed_parked_width_m/2
         goal=Pose(cx-(vehicle.length/2-vehicle.rear_axle_from_center),cy,0.)
+        # Build conservative occupied spans from the complete observed runs.
+        # Never guess a fixed 4.5m car extent from just one boundary.
         uncertainty=settings.boundary_uncertainty_m
-        prev_x0=left-settings.assumed_parked_length_m-uncertainty
-        prev_x1=left+uncertainty
-        next_x0=right-uncertainty
-        next_x1=right+settings.assumed_parked_length_m+uncertainty
-        reconstructed=(Rectangle((prev_x0+prev_x1)/2,cy,prev_x1-prev_x0,settings.assumed_parked_width_m),
-                       Rectangle((next_x0+next_x1)/2,cy,next_x1-next_x0,settings.assumed_parked_width_m))
+        occupied=((front_runs[i][0][1].origin_x-uncertainty,
+                   front_runs[i][-1][1].origin_x+uncertainty),
+                  (front_runs[i+1][0][1].origin_x-uncertainty,
+                   front_runs[i+1][-1][1].origin_x+uncertainty))
+        reconstructed=tuple(Rectangle((lo+hi)/2,cy,hi-lo,
+                                      settings.assumed_parked_width_m)
+                            for lo,hi in occupied)
         slot=ParkingSlot(side,left,right,certified,face,goal,reconstructed,
                          sum(len(x) for x in (front_runs[i],rear_runs[i],front_runs[i+1],rear_runs[i+1])),
                          len(clear))
-        return Perception("SLOT_FOUND","range_transition_bounded_gap",slot)
+        return Perception("SLOT_FOUND","side_ultrasound_bounded_gap",slot)
     return Perception("NO_SLOT",
                       "slot_too_short" if short else "insufficient_free_space_evidence" if unverified else "slot_not_verified",None)
