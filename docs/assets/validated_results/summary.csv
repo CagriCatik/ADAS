@@ -1,0 +1,4 @@
+scenario,status,goal_position_error_m,goal_heading_error_deg,path_length_m,duration_s,gear_changes,ultrasonic_echo_count,ultrasonic_samples,gif_frames,physics,tracking,collision_model
+parallel_left,PASS,0.6108,6.416,8.0,8.0,0,296,81,17,low_speed_kinematic,open_loop_command_replay,discrete_oriented_rectangle_SAT
+parallel_right,PASS,0.6108,6.416,8.0,8.0,0,296,81,17,low_speed_kinematic,open_loop_command_replay,discrete_oriented_rectangle_SAT
+perpendicular_reverse,PASS,0.6213,9.464,11.2,11.2,1,454,113,18,low_speed_kinematic,open_loop_command_replay,discrete_oriented_rectangle_SAT

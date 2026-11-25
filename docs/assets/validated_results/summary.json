@@ -1,0 +1,47 @@
+[
+  {
+    "scenario": "parallel_left",
+    "status": "PASS",
+    "goal_position_error_m": 0.6108,
+    "goal_heading_error_deg": 6.416,
+    "path_length_m": 8.0,
+    "duration_s": 8.0,
+    "gear_changes": 0,
+    "ultrasonic_echo_count": 296,
+    "ultrasonic_samples": 81,
+    "gif_frames": 17,
+    "physics": "low_speed_kinematic",
+    "tracking": "open_loop_command_replay",
+    "collision_model": "discrete_oriented_rectangle_SAT"
+  },
+  {
+    "scenario": "parallel_right",
+    "status": "PASS",
+    "goal_position_error_m": 0.6108,
+    "goal_heading_error_deg": 6.416,
+    "path_length_m": 8.0,
+    "duration_s": 8.0,
+    "gear_changes": 0,
+    "ultrasonic_echo_count": 296,
+    "ultrasonic_samples": 81,
+    "gif_frames": 17,
+    "physics": "low_speed_kinematic",
+    "tracking": "open_loop_command_replay",
+    "collision_model": "discrete_oriented_rectangle_SAT"
+  },
+  {
+    "scenario": "perpendicular_reverse",
+    "status": "PASS",
+    "goal_position_error_m": 0.6213,
+    "goal_heading_error_deg": 9.464,
+    "path_length_m": 11.2,
+    "duration_s": 11.2,
+    "gear_changes": 1,
+    "ultrasonic_echo_count": 454,
+    "ultrasonic_samples": 113,
+    "gif_frames": 18,
+    "physics": "low_speed_kinematic",
+    "tracking": "open_loop_command_replay",
+    "collision_model": "discrete_oriented_rectangle_SAT"
+  }
+]
