@@ -47,3 +47,13 @@ def test_viewer_has_sensor_visibility_toggle_and_12_readouts():
     assert 'id="beams"' in _HTML
     assert "function sensors" in _HTML
     assert "hit_x" in _HTML
+
+def test_mount_positions_are_rigidly_transformed_from_rear_axle_pose():
+    import math
+    from adas_sim.ultrasound_12 import default_channels,mount_world
+    from adas_sim.geometry import Pose
+    ch=default_channels()[0]
+    for p in (Pose(0,0,0),Pose(4,2,0),Pose(3,-1,math.pi/2)):
+        x,y,_=mount_world(p,ch)
+        assert math.isclose(x,p.x+math.cos(p.yaw)*ch.x_body-math.sin(p.yaw)*ch.y_body,abs_tol=1e-9)
+        assert math.isclose(y,p.y+math.sin(p.yaw)*ch.x_body+math.cos(p.yaw)*ch.y_body,abs_tol=1e-9)
