@@ -194,3 +194,29 @@ historical **preselected-target** trajectory baselines. They did not derive
 the parking target from ultrasonic sensing and must not be presented as
 sensor-enabled autonomous parking. The old publisher is disabled; only the
 new functional decision benchmark produces primary reference results.
+
+
+### 12-channel overlay V2 (hardware versus acoustic activity)
+
+The planar dashboard and local web workbench now show **all twelve real mounting
+positions at every frame**, labelled `F01`–`F06` and `R01`–`R06`.
+Each channel has a faint permanent FoV and a state indicator:
+
+- Amber: valid obstacle echo (`DETECTED`).
+- Grey: valid measurement without an echo (`NO_ECHO`).
+- Red: `DROPOUT` or `INTERFERENCE`; never usable as free-space evidence.
+- A white border and a brighter cyan beam: the **scheduled transmitter**.
+  The other eleven remain visible but are not shown as transmitting.
+
+The HUD includes all twelve IDs, last measured distances and channel states,
+not just the active channel. The web interface provides separate toggles for
+**all FoVs** and **active transmitter/echo**; mounting markers always remain
+visible. GIFs are rendered in the common Vehicle-Dynamics-style 1600×900
+dashboard. Behavioral slot acceptance and denial logic remains owned by
+`parking_perception.py` and `sensor_driven_parking.py`, not the renderer.
+
+**Timing limitation:** Present GIF frames represent snapshots of complete
+12-channel survey cycles with an illustrative scheduled transmitter highlight;
+they are not individual real-time acoustic wave-propagation subframes.
+TDMA collisions are flagged by the simplified `acoustic_schedule.py`, not
+derived from an OEM transducer waveform model.
