@@ -128,3 +128,40 @@ Additional modules:
 - `vehicle_adapter.py`: optional Vehicle-Dynamics **kinematic single-track** bridge with verified rear-axle/CoG coordinate conversion; **not** a seven-DOF adapter.
 
 Read the [V0.2 engineering status, implementation boundaries and limitations](docs/engineering-v02.md).
+
+
+## Visualization policy — aligned with Vehicle-Dynamics
+
+**Do not introduce new ADAS-only plot or GIF styles.** The shared visual
+reference is [Vehicle-Dynamics / visualization](https://github.com/CagriCatik/Vehicle-Dynamics/tree/main/src/vehicle_model/visualization):
+`plan_view.py`, `theme.py`, and `run_animation.py`.
+
+All GIFs produced by the gallery use
+`adas_sim.visualization.vehicle_dynamics_style.render_runs` and its
+recorded-history data contract. The layout is the upstream-style **dark
+automotive telemetry dashboard**: recorded-path overview, true-scale planar
+vehicle close-up with all four wheels, monospace HUD, and synchronized
+velocity, front-steer and rear-steer plots with a live time cursor.
+
+- The same dark figure/axes palette, colours, typography and line semantics
+  are used for parking and 2WS/4WS comparisons.
+- A single vehicle-body geometry and wheel rendering convention is shared
+  across all GIF entrypoints.
+- Each scenario family has explicit world limits; equal-axis scale is always
+  enabled. The close-up camera tracks the first recorded vehicle.
+- A scenario failing planning or replay must remain labelled as failed;
+  visualization cannot substitute a successful trajectory.
+- The deprecated standalone bar-chart SVG gallery has been removed.
+  Numeric benchmark comparisons remain in CSV and JSON.
+- The project does not vendor Vehicle-Dynamics source, nor require installing
+  its full 7-DOF simulation just to render the ADAS gallery.
+
+To regenerate the complete tracked gallery:
+
+```bash
+python -m pip install -e ".[test]"
+python scripts/generate_gallery.py
+```
+
+Any future new visualization must adapt its data to the same recorded-run
+contract rather than create a bespoke chart layout.
